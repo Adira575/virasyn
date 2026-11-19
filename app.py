@@ -94,14 +94,17 @@ with database_tab:
             ["All sources", "PubMed articles", "NCBI nucleotide genomes", "NCBI protein sequences",
              "RCSB PDB structures", "UniProtKB proteins"],
         )
-        c1, c2, c3 = st.columns([1, 1, 1])
+        c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
         with c1:
             page_size = st.selectbox("Results per page", [10, 20, 50], index=1)
         with c2:
-            date_from = st.text_input("Published from (PubMed only)", placeholder="YYYY-MM-DD")
+            page_number = st.number_input("Page", min_value=1, value=1, step=1)
         with c3:
+            date_from = st.text_input("Published from (PubMed only)", placeholder="YYYY-MM-DD")
+        with c4:
             date_to = st.text_input("Published to (PubMed only)", placeholder="YYYY-MM-DD")
         sort = st.selectbox("Sort publications", ["Best match", "Newest first"])
+        offset = int((page_number - 1) * page_size)
         submitted = st.form_submit_button("Search research databases", type="primary", use_container_width=True)
 
     if submitted:
@@ -111,32 +114,32 @@ with database_tab:
             try:
                 with st.spinner("Searching scientific databases..."):
                     if source == "All sources":
-                        bundle = search_all_sources(query.strip(), 0, min(5, page_size))
+                        bundle = search_all_sources(query.strip(), int((page_number - 1) * 5), 5)
                         st.session_state["virasyn_search_bundle"] = bundle
                         st.session_state["virasyn_search_query"] = query.strip()
                         st.session_state["virasyn_search_source"] = source
                     elif source == "PubMed articles":
-                        result = search_pubmed(query.strip(), 0, page_size, date_from, date_to, sort)
+                        result = search_pubmed(query.strip(), offset, page_size, date_from, date_to, sort)
                         st.session_state["virasyn_search_result"] = result
                         st.session_state["virasyn_search_source"] = source
                         st.session_state["virasyn_search_query"] = query.strip()
                     elif source == "NCBI nucleotide genomes":
-                        result = search_ncbi_sequences("nuccore", query.strip(), 0, page_size)
+                        result = search_ncbi_sequences("nuccore", query.strip(), offset, page_size)
                         st.session_state["virasyn_search_result"] = result
                         st.session_state["virasyn_search_source"] = source
                         st.session_state["virasyn_search_query"] = query.strip()
                     elif source == "NCBI protein sequences":
-                        result = search_ncbi_sequences("protein", query.strip(), 0, page_size)
+                        result = search_ncbi_sequences("protein", query.strip(), offset, page_size)
                         st.session_state["virasyn_search_result"] = result
                         st.session_state["virasyn_search_source"] = source
                         st.session_state["virasyn_search_query"] = query.strip()
                     elif source == "RCSB PDB structures":
-                        result = search_rcsb(query.strip(), 0, page_size)
+                        result = search_rcsb(query.strip(), offset, page_size)
                         st.session_state["virasyn_search_result"] = result
                         st.session_state["virasyn_search_source"] = source
                         st.session_state["virasyn_search_query"] = query.strip()
                     else:
-                        result = search_uniprot(query.strip(), 0, page_size)
+                        result = search_uniprot(query.strip(), offset, page_size)
                         st.session_state["virasyn_search_result"] = result
                         st.session_state["virasyn_search_source"] = source
                         st.session_state["virasyn_search_query"] = query.strip()
