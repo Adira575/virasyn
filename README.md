@@ -1,12 +1,23 @@
 # VIRASYN — Viral Systems Intelligence
 
-Decode. Discover. Understand.
+**Decode. Discover. Understand.**
 
-VIRASYN is an independent, modular research website for exploratory viral genome, protein and structure analysis. It is designed to support several virus groups while keeping their biological prediction tasks separate.
+VIRASYN is a browser-based research discovery and analysis workspace. Its interface is inspired by literature databases such as PubMed: search, browse results, open original records and move from discovery into sequence and structure analysis.
 
-## Run the website locally
+## Live research database search
 
-Requirements: Python 3.11 or newer. Optional system tools for reference searches: NCBI BLAST+ (blastp, makeblastdb) and HMMER (hmmscan, hmmpress).
+- **PubMed** — article title, authors, journal, date and DOI via NCBI E-utilities.
+- **NCBI Nucleotide** — nucleotide sequence record metadata and FASTA retrieval.
+- **NCBI Protein** — protein sequence record metadata and FASTA retrieval.
+- **RCSB PDB** — structure search and links to original structures.
+- **UniProtKB** — protein entry search and links to UniProt records.
+- **All sources** — federated search across the providers above.
+
+Results are retrieved live from each provider and cached briefly. VIRASYN links back to original records; it does not mirror or replace PubMed, GenBank, PDB or UniProt.
+
+## Run locally
+
+Requirements: Python 3.11 or newer. Optional BLAST+ and HMMER are needed for local reference searches.
 
 ~~~bash
 git clone https://github.com/Adira575/virasyn.git
@@ -20,55 +31,35 @@ pip install -r requirements.txt
 streamlit run app.py
 ~~~
 
-Open the local URL printed by Streamlit, normally http://localhost:8501.
+Open http://localhost:8501.
 
-## Docker
+## Deploy
 
-~~~bash
-docker build -t virasyn .
-docker run --rm -p 8501:8501 virasyn
-~~~
+The application is configured for Streamlit Community Cloud. Select repository `Adira575/virasyn`, branch `main`, main file `app.py`.
 
-Then open http://localhost:8501. The Docker image installs BLAST+ and HMMER.
+## Analysis features
 
-## Deploy a public website
+- Multi-file nucleotide/protein FASTA upload.
+- Six-frame preliminary ORF screening with selectable NCBI genetic code.
+- Protein physicochemical properties.
+- Optional BLASTP against user-provided references.
+- Optional HMMER profile scanning.
+- PDB/mmCIF metadata and PDB 3D viewer.
+- FASTA, CSV and JSON exports.
 
-For a simple public deployment, use Streamlit Community Cloud:
-1. Sign in at https://share.streamlit.io/ using GitHub.
-2. Choose repository Adira575/virasyn.
-3. Choose branch main.
-4. Set the main file path to app.py.
-5. Deploy.
+## Scientific limitations
 
-The repository includes packages.txt for BLAST+ and HMMER system packages. Deployment depends on hosting resource quotas and system-package support. A Docker-compatible host can use the supplied Dockerfile instead.
+VIRASYN is not a validated universal virus-host predictor. Six-frame ORF screening is not a complete virus-specific gene caller and does not model all eukaryotic splicing, RNA editing, transcript processing or polyprotein strategies. Similarity does not prove function. Attachment, receptor binding, host range and productive infection are distinct biological endpoints. Each virus group requires suitable reference data and independent validation.
 
-## Features in Release 0.2
+## External data and attribution
 
-- Multiple nucleotide/protein FASTA files.
-- FASTA validation and sequence-type inference; use .fna for nucleotide and .faa for proteins where possible.
-- Six-frame start-to-stop ORF screening, selectable NCBI genetic code, configurable minimum length and predicted protein FASTA export.
-- Protein physicochemical summaries: molecular weight, estimated pI, instability index, GRAVY and aromaticity.
-- Optional BLASTP comparison against a researcher-supplied protein FASTA.
-- Optional HMMER profile scanning against a researcher-supplied HMM library.
-- PDB and mmCIF metadata inspection; interactive PDB structure viewer.
-- CSV, FASTA and JSON downloads.
-- Automated unit tests and GitHub Actions.
+Follow the terms, citation guidance and rate limits of each upstream service. NCBI E-utilities requests are cached to reduce repeated traffic. More than three requests per second requires an NCBI API key under NCBI's published usage guidance. Set `VIRASYN_NCBI_API_KEY` as an environment variable or Streamlit secret if you have one.
 
-## Scientific scope and limitations
-
-VIRASYN is not a validated universal virus-host predictor. Six-frame ORF screening is preliminary and is not a complete virus-specific gene caller. It does not model eukaryotic splicing, RNA editing, overlapping transcripts, polyprotein processing or every viral expression strategy. For complex animal and plant virus genomes, use curated protein FASTA or a validated virus-specific gene-calling workflow.
-
-BLASTP/HMMER results depend on the reference libraries selected by the researcher. Similarity is not proof of function. Attachment, receptor binding, host range and productive infection are distinct biological endpoints. Each virus group needs curated labels, a biologically appropriate model and independent validation.
-
-## Tests
-
-~~~bash
-pip install -e ".[test]"
-pytest -q
-~~~
+- NCBI E-utilities: https://eutilities.github.io/site/
+- NCBI Datasets: https://www.ncbi.nlm.nih.gov/datasets/
+- RCSB PDB APIs: https://www.rcsb.org/docs/programmatic-access/web-apis-overview
+- UniProt API: https://www.uniprot.org/api-documentation
 
 ## Relationship to PhARIS
 
-VIRASYN is an independent project inspired by the computational problem addressed by PhARIS; it is not an official PhARIS release. Before reusing PhARIS source code, reference sequences, logo or branding, inspect its licence and obtain permission where required. Cite the original paper and repository when comparing methods.
-
-See ROADMAP.md for future development priorities.
+VIRASYN is an independent project inspired by the computational problem addressed by PhARIS; it is not an official PhARIS release. Check the upstream licence and obtain permission before reusing PhARIS code, reference data, logo or branding. Cite the original work when comparing methods.
