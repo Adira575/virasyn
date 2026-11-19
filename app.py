@@ -73,6 +73,8 @@ def render_record(record: dict, kind: str):
                     fasta = fetch_sequence_fasta("protein", record["id"])
                     st.download_button("Save FASTA", fasta, f"{record.get('accession', record['id'])}.faa",
                                        "text/plain", key=f"dl_faa_{record.get('id')}")
+                except Exception as exc:
+                    st.error(str(exc))
 
 
 with database_tab:
