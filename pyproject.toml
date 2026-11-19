@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "virasyn"
-version = "0.2.0"
-description = "Multi-virus genome, protein and structure analysis research website"
+version = "0.3.0"
+description = "Viral research discovery and analysis platform"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -13,6 +13,7 @@ dependencies = [
   "biopython>=1.83,<2",
   "pandas>=2.2,<4",
   "py3Dmol>=2.5,<3",
+  "requests>=2.31,<3",
 ]
 
 [project.optional-dependencies]
