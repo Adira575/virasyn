@@ -1,36 +1,39 @@
 # VIRASYN development roadmap
 
-## Stage 1 — Input and reproducible baseline (current)
-- FASTA parsing and sequence-type detection.
-- PDB metadata intake.
-- Optional BLASTP against user-supplied protein references.
-- Downloadable JSON report.
+## Release 0.2 — Interactive analysis MVP
+- Multi-file FASTA upload and validation.
+- Six-frame ORF screening with selectable NCBI genetic code.
+- Protein physicochemical analysis.
+- BLASTP and HMMER against user-supplied reference databases.
+- PDB/mmCIF metadata and interactive PDB viewer.
+- CSV, FASTA and JSON exports.
+- Docker deployment and automated tests.
 
 ## Stage 2 — Genome and protein annotation
-- Genome quality checks.
-- ORF prediction with a method appropriate to genome type.
-- Protein translation and annotation.
-- Curated profile/domain databases with explicit version provenance.
+- Genome quality checks and virus-aware ORF callers.
+- Automated functional annotation.
+- Curated domain databases and database-version provenance.
+- Viral protein family and architecture classification.
 
-## Stage 3 — Virus-specific modules
-- Bacteriophages: tail fibre, tail spike and RBP candidates; bacterial host/receptor evidence.
-- Animal viruses: attachment/entry proteins and host-cell receptor evidence.
-- Plant viruses: coat/movement proteins and host-factor evidence.
-- Other virus groups only where suitable reference data and validated methods exist.
+## Stage 3 — Virus-specific analysis modules
+- Bacteriophages: tail fibres, tail spikes, receptor-binding proteins and bacterial host/receptor evidence.
+- Animal viruses: attachment/entry proteins, host-cell receptor evidence and tropism datasets.
+- Plant viruses: movement/coat proteins, host-factor interactions and vector-associated biology.
+- Other virus groups only where suitable references and methods exist.
 
-## Stage 4 — Structure analysis
-- PDB/mmCIF validation and quality metadata.
-- Structure comparison using established software.
-- Clear distinction between structural similarity and established biological function.
+## Stage 4 — Advanced structure analysis
+- Structure quality/confidence metadata and domain architecture.
+- Structural similarity and domain comparisons.
+- Interactive visualisation and reproducible export.
 
-## Stage 5 — Host and interaction modelling
+## Stage 5 — Host and interaction prediction
 - Integrate existing tools only within their validated scope and licence.
-- Distinguish host range, attachment, receptor binding and productive infection.
-- Develop new models only with curated labelled datasets.
-- Use cluster-aware splits to reduce homolog leakage and independent test sets.
-- Evaluate precision, recall, F1, MCC, PR-AUC and calibration.
+- Separate host association, receptor recognition, entry and productive infection.
+- Train new models only with curated labelled data.
+- Use cluster-aware data splits to reduce homolog leakage and independent test sets.
+- Report precision, recall, F1, MCC, PR-AUC, calibration and uncertainty.
 
 ## Stage 6 — Production readiness
-- Background jobs, file size limits and resource quotas.
-- Temporary-file cleanup and job isolation.
-- Database versioning, reproducible reports, tests and CI.
+- Background jobs, upload quotas and user/job isolation.
+- Persistent job history and versioned reference databases.
+- Deployment monitoring and reproducible analysis manifests.
