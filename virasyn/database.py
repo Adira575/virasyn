@@ -3,6 +3,8 @@ from __future__ import annotations
 import csv
 import io
 import os
+import threading
+import time
 from typing import Any
 
 import requests
@@ -33,6 +35,23 @@ def _get_json(url: str, params: dict[str, Any] | None = None) -> dict:
     response.raise_for_status()
     return response.json()
 
+_NCBI_LOCK = threading.Lock()
+_LAST_NCBI_REQUEST = 0.0
+
+
+def _get_ncbi_json(url: str, params: dict[str, Any] | None = None) -> dict:
+    """Serialize E-utilities calls and stay below the unauthenticated rate limit."""
+    global _LAST_NCBI_REQUEST
+    with _NCBI_LOCK:
+        elapsed = time.monotonic() - _LAST_NCBI_REQUEST
+        if elapsed < 0.35:
+            time.sleep(0.35 - elapsed)
+        response = requests.get(url, params=params, timeout=30,
+                                headers={"User-Agent": USER_AGENT})
+        _LAST_NCBI_REQUEST = time.monotonic()
+    response.raise_for_status()
+    return response.json()
+
 
 def _entrez_search(db: str, term: str, offset: int, limit: int,
                    date_from: str = "", date_to: str = "",
@@ -49,7 +68,7 @@ def _entrez_search(db: str, term: str, offset: int, limit: int,
             params["maxdate"] = date_to.replace("-", "/")
         if date_from or date_to:
             params["datetype"] = "pdat"
-    payload = _get_json(f"{NCBI_BASE}/esearch.fcgi", params)
+    payload = _get_ncbi_json(f"{NCBI_BASE}/esearch.fcgi", params)
     result = payload.get("esearchresult", {})
     if result.get("error"):
         raise RuntimeError("; ".join(result["error"]))
@@ -59,7 +78,7 @@ def _entrez_search(db: str, term: str, offset: int, limit: int,
 def _entrez_summary(db: str, ids: list[str]) -> list[dict]:
     if not ids:
         return []
-    payload = _get_json(
+    payload = _get_ncbi_json(
         f"{NCBI_BASE}/esummary.fcgi",
         {**_ncbi_params(), "db": db, "id": ",".join(ids), "retmode": "json"},
     )
