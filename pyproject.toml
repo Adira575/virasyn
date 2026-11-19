@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "virasyn"
+version = "0.1.0"
+description = "Modular viral genome, protein and structure analysis research platform"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "streamlit>=1.36,<2",
+  "biopython>=1.83,<2",
+  "pandas>=2.2,<4",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["virasyn*"]
