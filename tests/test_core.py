@@ -1,4 +1,5 @@
 import pytest
+from Bio.Seq import Seq
 
 from virasyn.core import (
     parse_fasta,
@@ -40,7 +41,19 @@ def test_six_frame_orf_finds_forward_orf():
     assert forward[0]["protein_sequence"].startswith("M")
 
 
+def test_six_frame_orf_finds_reverse_orf():
+    coding = "ATG" + "GCT" * 30 + "TAA"
+    reverse_strand_genome = str(Seq(coding).reverse_complement())
+    hits = predict_six_frame_orfs(
+        reverse_strand_genome, sequence_id="reverse_toy", min_aa=30, genetic_code=11
+    )
+    reverse = [hit for hit in hits if hit["strand"] == "-" and hit["frame"] == -1]
+    assert reverse
+    assert reverse[0]["start_1based"] == 1
+    assert reverse[0]["end_1based"] == len(reverse_strand_genome)
+
+
 def test_protein_properties():
     props = protein_properties("MKWVTFISLLFLFSSAYS")
-    assert props["length_aa"] == 17
+    assert props["length_aa"] == 18
     assert "molecular_weight_da" in props
