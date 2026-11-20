@@ -730,6 +730,11 @@ with workbench_tab:
             "Capabilities": "Six-frame ORF screening, local BLASTP against an authorized RBP reference FASTA, identity/query-coverage thresholds, optional cluster metadata and downloadable candidate reports.",
             "Current status": "Available · reference library supplied by user",
         },
+        {
+            "Module": "Bacteria-focused Phage Intelligence",
+            "Capabilities": "Integrated RBP homology discovery, curated bacterial host evidence ranking, exact-ID receptor annotation mapping, structure-file inventory and reproducible exports. Calibrated universal binding prediction and structural docking are not yet implemented.",
+            "Current status": "Partial · evidence integration available",
+        },
     ])
     st.dataframe(
         module_catalogue,
@@ -1370,16 +1375,17 @@ VIRASYN brings literature discovery and molecular data retrieval together with s
 - UniProtKB and InterPro.
 - AlphaFold Protein Structure Database — published protein structure predictions, confidence metadata and coordinate downloads.
 - PhARIS-inspired RBP intelligence — independent local six-frame ORF and BLASTP workflow using an authorized user-supplied reference library.
+- Bacteria-focused Phage Intelligence — integrated RBP, receptor-annotation and curated bacterial host-evidence analysis.
 
 VIRASYN retrieves records from upstream APIs when you search. It does not own, replace or mirror those databases. The Database Directory also links to specialist portals that are not yet directly queried by the app.
 """)
     st.subheader("Scientific interpretation")
     st.markdown("""
-VIRASYN is not yet a universal virus-host prediction system. Bacteriophage RBPs, animal-virus attachment/entry proteins and plant-virus host interactions require separate training data and methods. Sequence similarity, attachment, receptor binding, host range and productive infection are distinct levels of evidence.
+VIRASYN is a bacteria-focused phage research platform. Its current Phage Intelligence module integrates reference-supported RBP homology with supplied host and receptor evidence; it is not yet a universal or calibrated RBP–receptor binding predictor. Sequence similarity, attachment, receptor binding, host range and productive infection are distinct levels of evidence.
 """)
     st.subheader("Development roadmap")
     st.markdown("""
-The PhARIS-inspired module is an independent implementation and does not bundle the original PhARIS reference sequences. Use only reference datasets you are authorized to use. Homology matches do not establish adsorption, receptor binding, infection or therapeutic suitability.
+The PhARIS-inspired module is an independent implementation and does not bundle the original PhARIS reference sequences. The new bacteria-focused Phage Intelligence module adds evidence-ranked host and receptor hypotheses using researcher-supplied, provenance-tracked CSVs. Use only reference datasets you are authorized to use. Homology matches and evidence indices do not establish adsorption, receptor binding, infection or therapeutic suitability.
 
 The next major development goal is to move VIRASYN towards a comprehensive viral research
 knowledgebase through these planned capabilities:
