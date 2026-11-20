@@ -500,6 +500,15 @@ with qpcr_tab:
                         ntc_qc = qpcr_result["ntc_qc"]
 
                         st.success("qPCR calculations completed. Review the quality flags before interpreting the biology.")
+                        out_of_range_efficiencies = {
+                            target: value for target, value in efficiency_map.items()
+                            if value < 90 or value > 110
+                        }
+                        if out_of_range_efficiencies:
+                            st.warning(
+                                "Review assay efficiencies outside the common 90–110% range: "
+                                + ", ".join(f"{target}={value:g}%" for target, value in out_of_range_efficiencies.items())
+                            )
                         if not group_summary.empty and group_summary["n_biological_samples"].min() < 2:
                             st.warning(
                                 "Some groups have fewer than two biological samples. Inferential p-values are unavailable or underpowered."
@@ -542,6 +551,7 @@ with qpcr_tab:
 
                         report_buffer = BytesIO()
                         with pd.ExcelWriter(report_buffer, engine="openpyxl") as writer:
+                            qpcr_raw.to_excel(writer, sheet_name="OriginalInput", index=False)
                             qpcr_wells.to_excel(writer, sheet_name="WellData", index=False)
                             sample_level.to_excel(writer, sheet_name="SampleNormalised", index=False)
                             group_summary.to_excel(writer, sheet_name="GroupSummary", index=False)
