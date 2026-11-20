@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from io import BytesIO
+import json
 import tempfile
 
 import pandas as pd
@@ -16,6 +18,10 @@ from virasyn.database import (
     search_europe_pmc, search_interpro, search_ncbi_sequences,
     search_ncbi_taxonomy, search_openalex, search_pubmed, search_rcsb,
     search_uniprot,
+)
+from virasyn.qpcr import (
+    analyse_relative_expression, calculate_standard_curves, detect_column,
+    normalise_qpcr_wells, read_qpcr_table,
 )
 
 st.set_page_config(
@@ -44,8 +50,9 @@ div[data-testid="stMetric"] {background:rgba(120,150,170,.08); border:1px solid 
 
 st.caption("An integrated viral research discovery and analysis workspace.")
 
-database_tab, analysis_tab, resources_tab, about_tab = st.tabs(
-    ["🔎 Research database", "🧬 Sequence & structure analysis", "📚 Database directory", "ℹ️ About VIRASYN"]
+database_tab, analysis_tab, qpcr_tab, resources_tab, about_tab = st.tabs(
+    ["🔎 Research database", "🧬 Sequence & structure analysis", "🧪 PCR / qPCR analysis",
+     "📚 Database directory", "ℹ️ About VIRASYN"]
 )
 
 def render_record(record: dict, kind: str):
@@ -221,6 +228,432 @@ with database_tab:
                     current_source
                 )
                 render_record(record, kind)
+
+
+with qpcr_tab:
+    st.subheader("Real-time PCR (qPCR / RT-qPCR) analysis")
+    st.write(
+        "Import a well-level Cq/Ct export, map the instrument-specific columns, inspect technical "
+        "replicates and calculate normalized relative expression. Technical wells are grouped within "
+        "each biological sample; they are not counted as independent biological replicates."
+    )
+    st.info(
+        "Supported inputs: RDML, CSV, TSV, TXT and Excel XLSX/XLSM files containing reported Cq/Ct values. "
+        "RDML files may also include amplification and melt-curve traces, which VIRASYN can display. "
+        "Cq is not yet recalculated from raw fluorescence traces, and proprietary binary instrument projects "
+        "still need export to a supported format."
+    )
+    qpcr_file = st.file_uploader(
+        "Upload qPCR plate/result export",
+        type=["rdml", "csv", "tsv", "txt", "xlsx", "xlsm"],
+        key="qpcr_input_file",
+    )
+
+    if qpcr_file is not None:
+        try:
+            qpcr_sheet = None
+            if Path(qpcr_file.name).suffix.lower() in {".xlsx", ".xlsm"}:
+                workbook = pd.ExcelFile(BytesIO(qpcr_file.getvalue()), engine="openpyxl")
+                qpcr_sheet = st.selectbox(
+                    "Worksheet", workbook.sheet_names, key="qpcr_sheet_name"
+                )
+            qpcr_raw = read_qpcr_table(
+                qpcr_file.getvalue(), qpcr_file.name, sheet_name=qpcr_sheet
+            )
+            st.caption(f"Loaded {len(qpcr_raw):,} rows and {len(qpcr_raw.columns)} columns.")
+            with st.expander("Preview original instrument export", expanded=True):
+                st.dataframe(qpcr_raw.head(15), use_container_width=True, hide_index=True)
+
+            if "Amplification trace (JSON)" in qpcr_raw.columns or "Melt curve trace (JSON)" in qpcr_raw.columns:
+                trace_rows = []
+                for trace_index, trace_row in qpcr_raw.iterrows():
+                    amp_text = trace_row.get("Amplification trace (JSON)", "")
+                    melt_text = trace_row.get("Melt curve trace (JSON)", "")
+                    if (isinstance(amp_text, str) and amp_text) or (isinstance(melt_text, str) and melt_text):
+                        trace_label = (
+                            f"{trace_row.get('Sample', trace_row.get('Sample ID', 'Sample'))} · "
+                            f"{trace_row.get('Target', 'Target')} · {trace_row.get('Well', trace_index)}"
+                        )
+                        trace_rows.append((trace_label, trace_index))
+                if trace_rows:
+                    with st.expander("RDML amplification and melt-curve trace viewer", expanded=False):
+                        trace_labels = [item[0] for item in trace_rows]
+                        selected_trace_label = st.selectbox(
+                            "Reaction / target",
+                            trace_labels,
+                            key="qpcr_rdml_trace_select",
+                        )
+                        selected_trace_index = dict(trace_rows)[selected_trace_label]
+                        selected_trace = qpcr_raw.loc[selected_trace_index]
+                        t1, t2 = st.columns(2)
+                        amp_text = selected_trace.get("Amplification trace (JSON)", "")
+                        melt_text = selected_trace.get("Melt curve trace (JSON)", "")
+                        with t1:
+                            st.caption("Amplification: cycle vs fluorescence")
+                            if isinstance(amp_text, str) and amp_text:
+                                amp_frame = pd.DataFrame(json.loads(amp_text))
+                                if not amp_frame.empty and {"cyc", "fluor"}.issubset(amp_frame.columns):
+                                    st.line_chart(amp_frame.set_index("cyc")["fluor"], use_container_width=True)
+                                else:
+                                    st.info("No amplification-curve points were included in this RDML reaction.")
+                            else:
+                                st.info("No amplification-curve points were included in this RDML reaction.")
+                        with t2:
+                            st.caption("Melt curve: temperature vs fluorescence")
+                            if isinstance(melt_text, str) and melt_text:
+                                melt_frame = pd.DataFrame(json.loads(melt_text))
+                                if not melt_frame.empty and {"tmp", "fluor"}.issubset(melt_frame.columns):
+                                    st.line_chart(melt_frame.set_index("tmp")["fluor"], use_container_width=True)
+                                else:
+                                    st.info("No melt-curve points were included in this RDML reaction.")
+                            else:
+                                st.info("No melt-curve points were included in this RDML reaction.")
+                        st.caption("Stored trace visualization only; VIRASYN does not yet call or recalculate Cq from these raw curves.")
+
+            qpcr_columns = list(qpcr_raw.columns)
+
+            def _qpcr_index(candidate):
+                return qpcr_columns.index(candidate) if candidate in qpcr_columns else 0
+
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                qpcr_sample_col = st.selectbox(
+                    "Biological sample ID",
+                    qpcr_columns,
+                    index=_qpcr_index(detect_column(qpcr_columns, (
+                        "sample", "sample id", "sample name", "specimen"
+                    ))),
+                    help="Use the same ID for technical wells from one biological sample. Different biological samples need different IDs.",
+                    key="qpcr_sample_col",
+                )
+            with c2:
+                qpcr_target_col = st.selectbox(
+                    "Target / gene / assay",
+                    qpcr_columns,
+                    index=_qpcr_index(detect_column(qpcr_columns, (
+                        "target", "gene", "assay", "detector"
+                    ))),
+                    key="qpcr_target_col",
+                )
+            with c3:
+                qpcr_cq_col = st.selectbox(
+                    "Cq / Ct value",
+                    qpcr_columns,
+                    index=_qpcr_index(detect_column(qpcr_columns, (
+                        "cq", "ct", "quantification cycle", "cycle threshold"
+                    ))),
+                    key="qpcr_cq_col",
+                )
+
+            optional_columns = ["— None —"] + qpcr_columns
+            c4, c5 = st.columns(2)
+            with c4:
+                qpcr_condition_choice = st.selectbox(
+                    "Experimental condition / group",
+                    optional_columns,
+                    index=(
+                        optional_columns.index(detect_column(qpcr_columns, (
+                            "condition", "group", "treatment", "experimental group"
+                        )))
+                        if detect_column(qpcr_columns, (
+                            "condition", "group", "treatment", "experimental group"
+                        )) in optional_columns else 0
+                    ),
+                    key="qpcr_condition_col",
+                )
+            with c5:
+                qpcr_role_choice = st.selectbox(
+                    "Sample role (optional, for NTC identification)",
+                    optional_columns,
+                    index=(
+                        optional_columns.index(detect_column(qpcr_columns, (
+                            "sample type", "role", "control type", "well type"
+                        )))
+                        if detect_column(qpcr_columns, (
+                            "sample type", "role", "control type", "well type"
+                        )) in optional_columns else 0
+                    ),
+                    key="qpcr_role_col",
+                )
+
+            qpcr_condition_col = None if qpcr_condition_choice == "— None —" else qpcr_condition_choice
+            qpcr_role_col = None if qpcr_role_choice == "— None —" else qpcr_role_choice
+            try:
+                qpcr_wells = normalise_qpcr_wells(
+                    qpcr_raw,
+                    sample_col=qpcr_sample_col,
+                    target_col=qpcr_target_col,
+                    cq_col=qpcr_cq_col,
+                    condition_col=qpcr_condition_col,
+                    role_col=qpcr_role_col,
+                )
+                qpcr_targets = sorted(qpcr_wells["target"].dropna().astype(str).unique().tolist())
+                qpcr_conditions = sorted(
+                    qpcr_wells.loc[~qpcr_wells["is_ntc"], "condition"].dropna().astype(str).unique().tolist()
+                )
+                detected_count = int(qpcr_wells.loc[~qpcr_wells["is_ntc"], "Cq"].notna().sum())
+                ntc_detected = int(qpcr_wells.loc[qpcr_wells["is_ntc"], "Cq"].notna().sum())
+
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Wells / rows", f"{len(qpcr_wells):,}")
+                m2.metric("Targets", len(qpcr_targets))
+                m3.metric("Detected sample wells", detected_count)
+                m4.metric("NTC detections", ntc_detected)
+
+                if not qpcr_condition_col:
+                    st.warning(
+                        "No condition column selected. VIRASYN will report normalized sample-level "
+                        "quantities, but a treatment-versus-control fold change cannot be interpreted."
+                    )
+                st.caption(
+                    "Undetermined, blank and non-numeric Cq entries remain missing values; they are never converted to zero."
+                )
+
+                qpcr_refs_default = [
+                    gene for gene in qpcr_targets
+                    if gene.lower() in {"gapdh", "actb", "b2m", "hprt1", "hprt", "rplp0", "tbp", "18s", "18s rrna"}
+                ]
+                qpcr_refs = st.multiselect(
+                    "Reference gene(s) for normalization",
+                    qpcr_targets,
+                    default=qpcr_refs_default,
+                    help="Choose one or more experimentally justified, stable reference genes. Do not assume a housekeeping gene is stable without evidence.",
+                    key="qpcr_reference_genes",
+                )
+                qpcr_calibrator = st.selectbox(
+                    "Control / calibrator condition",
+                    qpcr_conditions or ["All samples"],
+                    key="qpcr_calibrator",
+                )
+                qpcr_max_sd = st.slider(
+                    "Technical replicate SD review threshold (Cq)",
+                    min_value=0.25, max_value=3.0, value=1.0, step=0.25,
+                    help="This flags spread for review; it does not automatically remove wells.",
+                    key="qpcr_max_sd",
+                )
+
+                st.markdown("#### Optional assay standard curves")
+                st.caption(
+                    "Upload a separate standard dilution-series table with target, positive concentration "
+                    "and Cq/Ct columns. At least three distinct concentrations are needed for each assay."
+                )
+                qpcr_standard_file = st.file_uploader(
+                    "Standard-curve export (optional)",
+                    type=["rdml", "csv", "tsv", "txt", "xlsx", "xlsm"],
+                    key="qpcr_standard_file",
+                )
+                qpcr_standard_results = pd.DataFrame()
+                qpcr_standard_map = {}
+                if qpcr_standard_file is not None:
+                    try:
+                        qpcr_standard_raw = read_qpcr_table(
+                            qpcr_standard_file.getvalue(), qpcr_standard_file.name
+                        )
+                        st.dataframe(qpcr_standard_raw.head(10), use_container_width=True, hide_index=True)
+                        sc_columns = list(qpcr_standard_raw.columns)
+                        sc_target = st.selectbox(
+                            "Standard curve target column", sc_columns,
+                            index=(
+                                sc_columns.index(detect_column(sc_columns, ("target", "gene", "assay")))
+                                if detect_column(sc_columns, ("target", "gene", "assay")) in sc_columns else 0
+                            ),
+                            key="qpcr_sc_target",
+                        )
+                        sc_cq = st.selectbox(
+                            "Standard curve Cq/Ct column", sc_columns,
+                            index=sc_columns.index(detect_column(sc_columns, ("cq", "ct")))
+                            if detect_column(sc_columns, ("cq", "ct")) in sc_columns else 0,
+                            key="qpcr_sc_cq",
+                        )
+                        sc_concentration = st.selectbox(
+                            "Known standard concentration column", sc_columns,
+                            index=sc_columns.index(detect_column(sc_columns, (
+                                "concentration", "copies", "quantity"
+                            )))
+                            if detect_column(sc_columns, (
+                                "concentration", "copies", "quantity"
+                            )) in sc_columns else 0,
+                            key="qpcr_sc_concentration",
+                        )
+                        qpcr_standard_results = calculate_standard_curves(
+                            qpcr_standard_raw, sc_target, sc_cq, sc_concentration
+                        )
+                        st.dataframe(qpcr_standard_results, use_container_width=True, hide_index=True)
+                        qpcr_standard_map = {
+                            str(row["target"]): float(row["efficiency_percent"])
+                            for _, row in qpcr_standard_results.iterrows()
+                            if pd.notna(row["efficiency_percent"])
+                        }
+                    except Exception as standard_error:
+                        st.error(f"Could not process standard-curve file: {standard_error}")
+
+                efficiency_rows = [
+                    {
+                        "target": target,
+                        "efficiency_percent": qpcr_standard_map.get(target, 100.0),
+                        "source": "Standard curve" if target in qpcr_standard_map else "Assumed 100% — edit if known",
+                    }
+                    for target in qpcr_targets
+                ]
+                efficiency_frame = pd.DataFrame(efficiency_rows)
+                st.markdown("#### Amplification efficiency by assay")
+                efficiency_edit = st.data_editor(
+                    efficiency_frame,
+                    hide_index=True,
+                    use_container_width=True,
+                    disabled=["target", "source"],
+                    column_config={
+                        "efficiency_percent": st.column_config.NumberColumn(
+                            "Efficiency (%)", min_value=0.0, max_value=300.0, step=0.5,
+                            help="Use the value measured from a validated standard curve where available."
+                        )
+                    },
+                    key="qpcr_efficiency_editor",
+                )
+                if not qpcr_standard_map:
+                    st.warning(
+                        "No usable standard-curve efficiencies were imported. The table starts at an "
+                        "explicit 100% efficiency assumption for every target. Edit these values using "
+                        "your assay validation data; results are exploratory until efficiencies are established."
+                    )
+                else:
+                    st.caption(
+                        "Standard-curve efficiencies were prefilled. Review slope, R² and efficiency status "
+                        "before accepting the values."
+                    )
+
+                st.markdown("#### Run analysis")
+                if st.button(
+                    "Analyse qPCR data",
+                    type="primary",
+                    use_container_width=True,
+                    disabled=not qpcr_refs,
+                    key="qpcr_analyse_button",
+                ):
+                    try:
+                        efficiency_map = {
+                            str(row["target"]): float(row["efficiency_percent"])
+                            for _, row in efficiency_edit.iterrows()
+                        }
+                        qpcr_result = analyse_relative_expression(
+                            qpcr_wells,
+                            reference_genes=qpcr_refs,
+                            calibrator_condition=qpcr_calibrator,
+                            efficiency_percent=efficiency_map,
+                            max_technical_sd=qpcr_max_sd,
+                        )
+                        sample_level = qpcr_result["sample_level"]
+                        group_summary = qpcr_result["group_summary"]
+                        technical_qc = qpcr_result["technical_qc"]
+                        ntc_qc = qpcr_result["ntc_qc"]
+
+                        st.success("qPCR calculations completed. Review the quality flags before interpreting the biology.")
+                        out_of_range_efficiencies = {
+                            target: value for target, value in efficiency_map.items()
+                            if value < 90 or value > 110
+                        }
+                        if out_of_range_efficiencies:
+                            st.warning(
+                                "Review assay efficiencies outside the common 90–110% range: "
+                                + ", ".join(f"{target}={value:g}%" for target, value in out_of_range_efficiencies.items())
+                            )
+                        if not group_summary.empty and group_summary["n_biological_samples"].min() < 2:
+                            st.warning(
+                                "Some groups have fewer than two biological samples. Inferential p-values are unavailable or underpowered."
+                            )
+                        if not technical_qc.empty and technical_qc["technical_qc"].str.startswith("Review").any():
+                            st.warning("Some technical replicate groups exceed the selected SD threshold. They are flagged, not automatically excluded.")
+                        partial_ref_rows = sample_level["normalization_status"].str.startswith("Partial reference set").sum()
+                        if partial_ref_rows:
+                            st.warning(
+                                f"{partial_ref_rows} sample-target rows used fewer than all selected reference genes. "
+                                "Review the reference-gene detection table before interpreting these samples."
+                            )
+                        if ntc_detected:
+                            st.error("One or more NTC wells have a Cq value. Investigate possible contamination before interpreting results.")
+                        elif int(ntc_qc.iloc[0]["NTC_wells"]) == 0:
+                            st.info("No NTC rows were detected in the supplied table. Confirm that appropriate negative controls were run and reported.")
+
+                        r1, r2, r3 = st.columns(3)
+                        r1.metric("Biological samples", sample_level["sample_id"].nunique())
+                        r2.metric("Normalized sample-target rows", int(sample_level["normalized_quantity"].notna().sum()))
+                        r3.metric("Targets analysed", group_summary["target"].nunique() if not group_summary.empty else 0)
+
+                        st.markdown("##### Group-level relative expression")
+                        st.dataframe(group_summary, use_container_width=True, hide_index=True)
+                        fold_plot = group_summary[
+                            group_summary["condition"].ne(qpcr_calibrator)
+                        ].pivot_table(
+                            index="target",
+                            columns="condition",
+                            values="fold_change_vs_calibrator",
+                            aggfunc="first",
+                        )
+                        if not fold_plot.empty:
+                            st.markdown("##### Fold change versus calibrator")
+                            st.bar_chart(fold_plot, use_container_width=True)
+
+                        with st.expander("Per-biological-sample normalized quantities", expanded=True):
+                            st.dataframe(sample_level, use_container_width=True, hide_index=True)
+                        with st.expander("Technical replicate quality-control table"):
+                            st.dataframe(technical_qc, use_container_width=True, hide_index=True)
+                        with st.expander("NTC quality-control summary"):
+                            st.dataframe(ntc_qc, use_container_width=True, hide_index=True)
+                        if not qpcr_standard_results.empty:
+                            with st.expander("Standard-curve fit details"):
+                                st.dataframe(qpcr_standard_results, use_container_width=True, hide_index=True)
+
+                        report_buffer = BytesIO()
+                        with pd.ExcelWriter(report_buffer, engine="openpyxl") as writer:
+                            qpcr_raw.to_excel(writer, sheet_name="OriginalInput", index=False)
+                            qpcr_wells.to_excel(writer, sheet_name="WellData", index=False)
+                            sample_level.to_excel(writer, sheet_name="SampleNormalised", index=False)
+                            group_summary.to_excel(writer, sheet_name="GroupSummary", index=False)
+                            technical_qc.to_excel(writer, sheet_name="TechnicalQC", index=False)
+                            ntc_qc.to_excel(writer, sheet_name="NTC_QC", index=False)
+                            efficiency_edit.to_excel(writer, sheet_name="Efficiencies", index=False)
+                            if not qpcr_standard_results.empty:
+                                qpcr_standard_results.to_excel(writer, sheet_name="StandardCurves", index=False)
+                        st.download_button(
+                            "Download complete qPCR analysis workbook",
+                            report_buffer.getvalue(),
+                            "virasyn_qpcr_analysis.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                        )
+                        st.download_button(
+                            "Download normalized sample-level data (CSV)",
+                            sample_level.to_csv(index=False),
+                            "virasyn_qpcr_sample_normalised.csv",
+                            "text/csv",
+                        )
+                        st.download_button(
+                            "Download group summary (CSV)",
+                            group_summary.to_csv(index=False),
+                            "virasyn_qpcr_group_summary.csv",
+                            "text/csv",
+                        )
+                    except Exception as analysis_error:
+                        st.error(f"qPCR analysis could not be completed: {analysis_error}")
+            except Exception as import_error:
+                st.error(f"Could not read or map this qPCR export: {import_error}")
+        except Exception as file_error:
+            st.error(f"Could not load qPCR file: {file_error}")
+    else:
+        st.markdown(
+            """
+            **Expected data layout (example):**
+
+            | Sample | Condition | Target | Cq |
+            |---|---|---|---:|
+            | Control_1 | Control | ACTB | 19.8 |
+            | Control_1 | Control | GeneA | 25.4 |
+            | Treatment_1 | Treatment | ACTB | 20.1 |
+            | Treatment_1 | Treatment | GeneA | 22.7 |
+
+            Upload your instrument's CSV, TSV or Excel Cq/Ct export to begin.
+            """
+        )
 
 
 with resources_tab:
@@ -481,13 +914,5 @@ knowledgebase through four planned capabilities:
 These are planned development areas, not capabilities of the current release. Virus–host prediction
 will require virus-group-appropriate datasets and independent validation rather than assuming one
 universal model can cover bacteriophages, animal viruses and plant viruses.
-""")
-    st.subheader("VIRASYN AI helper")
-    st.markdown("""
-The floating assistant provides help with site navigation, search strategy and interpretation of computational outputs.
-Without an API key it runs in quick-help mode. To enable generative responses, the site owner must set
-`OPENAI_API_KEY` in Streamlit Community Cloud → App settings → Secrets. An optional
-`VIRASYN_AI_MODEL` secret selects a model available to that API account. API usage is billed separately
-from a ChatGPT subscription. Keep the key server-side and never put it in browser JavaScript or GitHub code.
 """)
     st.caption("Cite the primary databases, records and software methods used in every analysis.")
