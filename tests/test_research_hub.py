@@ -1,5 +1,4 @@
 from virasyn import database
-from virasyn.assistant import _fallback_answer
 
 
 def test_europe_pmc_record_mapping(monkeypatch):
@@ -65,7 +64,3 @@ def test_interpro_entry_mapping(monkeypatch):
     assert result["results"][0]["title"] == "Example domain"
 
 
-def test_assistant_quick_help_mentions_orf_limitations():
-    answer = _fallback_answer("Explain six-frame ORFs", "")
-    assert "preliminary" in answer.lower()
-    assert "gene caller" in answer.lower()

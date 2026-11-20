@@ -2,7 +2,7 @@
 
 **Decode. Discover. Understand.**
 
-VIRASYN is a browser-based viral research discovery and analysis workspace. It combines federated search across public literature and molecular-data services with local sequence/structure workflows and a floating research assistant.
+VIRASYN is a browser-based viral research discovery and analysis workspace. It combines federated search across public literature and molecular-data services with local sequence/structure workflows.
 
 ## Research database integrations
 
@@ -22,23 +22,6 @@ The federated search can query:
 The Database Directory also links to specialist resources including ICTV taxonomy, NCBI Virus, PHROGs, PhagesDB, INPHARED, ViralZone, Virus-Host DB, BV-BRC, Nextstrain, PDBe, Pfam, AlphaFold DB and VEuPathDB. These directory links are external portals; they are not all queried directly by the app.
 
 VIRASYN retrieves results from upstream providers and links to the source records. It does not mirror or replace those databases. Data coverage, licensing, citation requirements and query syntax differ by provider.
-
-## Floating VIRASYN AI assistant
-
-A compact bottom-right helper is available across the site. It can explain the interface, search sources, ORF results, protein properties, BLASTP/HMMER outputs and scientific limitations.
-
-### Enable generative answers
-
-The assistant has a basic quick-help mode without an API key. To enable generative answers, add a server-side OpenAI API key in **Streamlit Community Cloud → App settings → Secrets**:
-
-~~~toml
-OPENAI_API_KEY = "your_api_key"
-VIRASYN_AI_MODEL = "gpt-6.2-astra"
-~~~
-
-The model setting is optional; use a model that is available to your API account. API usage is billed separately from a ChatGPT subscription. Never put the API key in browser-side code or commit it to GitHub.
-
-The assistant is a research aid, not a clinical decision system. Verify scientific claims against original records and literature. It should not be treated as evidence that a predicted protein binds a receptor or that a virus infects a host.
 
 ## Development roadmap
 
@@ -84,7 +67,7 @@ Open http://localhost:8501.
 
 ## Deploy
 
-The application is configured for Streamlit Community Cloud. Select repository `Adira575/virasyn`, branch `main`, main file `app.py`. Add optional API keys under App settings → Secrets, not as committed files.
+The application is configured for Streamlit Community Cloud. Select repository `Adira575/virasyn`, branch `main`, main file `app.py`. No AI API key is required. Optional NCBI API credentials and a contact email can be configured as server-side secrets.
 
 ## Scientific limitations
 
