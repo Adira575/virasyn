@@ -10,11 +10,14 @@ def test_host_evidence_ranks_experimental_support_first():
         "phage_id,host_taxid,host_name,evidence_type,evidence_level,source,citation\n"
         "P1,1280,Staphylococcus aureus,productive_infection,experimental,study,doi:1\n"
         "P1,562,Escherichia coli,sequence_similarity,computational,tool,doi:2\n"
+        "P2,1280,Staphylococcus aureus,host_range,curated,db,doi:3\n"
     )
     ranked, summary = score_host_evidence(data)
     assert ranked.iloc[0]["host_taxid"] == "1280"
     assert ranked.iloc[0]["experimental_records"] == 1
     assert summary["index_is_probability"] is False
+    assert len(ranked[ranked["phage_id"] == "P1"]) == 2
+    assert len(ranked[ranked["phage_id"] == "P2"]) == 1
 
 def test_unknown_evidence_level_is_rejected():
     data = (
