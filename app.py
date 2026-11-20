@@ -50,9 +50,18 @@ div[data-testid="stMetric"] {background:rgba(120,150,170,.08); border:1px solid 
 
 st.caption("An integrated viral research discovery and analysis workspace.")
 
-database_tab, analysis_tab, qpcr_tab, workbench_tab, resources_tab, about_tab = st.tabs(
-    ["🔎 Research database", "🧬 Sequence & structure analysis", "🧪 PCR / qPCR analysis",
-     "🧰 Bioinformatics workbench", "📚 Database directory", "ℹ️ About VIRASYN"]
+app_section = st.selectbox(
+    "Open VIRASYN workspace",
+    [
+        "🔎 Research database",
+        "🧬 Sequence & structure analysis",
+        "🧪 PCR / qPCR analysis",
+        "🧰 Bioinformatics workbench",
+        "📚 Database directory",
+        "ℹ️ About VIRASYN",
+    ],
+    index=1,
+    key="virasyn_workspace_section",
 )
 
 def render_record(record: dict, kind: str):
@@ -87,7 +96,7 @@ def render_record(record: dict, kind: str):
                     st.error(str(exc))
 
 
-with database_tab:
+if app_section == "🔎 Research database":
     st.subheader("Search viral research literature and molecular data")
     st.write(
         "Search publications, viral nucleotide records, protein records and "
@@ -230,7 +239,7 @@ with database_tab:
                 render_record(record, kind)
 
 
-with qpcr_tab:
+if app_section == "🧪 PCR / qPCR analysis":
     st.subheader("Real-time PCR (qPCR / RT-qPCR) analysis")
     st.write(
         "Import a well-level Cq/Ct export, map the instrument-specific columns, inspect technical "
@@ -656,7 +665,7 @@ with qpcr_tab:
         )
 
 
-with workbench_tab:
+if app_section == "🧰 Bioinformatics workbench":
     st.subheader("VIRASYN Bioinformatics Workbench")
     st.write(
         "A consolidated catalogue of research workflows spanning sequence, genome, transcriptome, "
@@ -747,7 +756,7 @@ with workbench_tab:
     )
 
 
-with resources_tab:
+if app_section == "📚 Database directory":
     st.subheader("A wider directory of public virology and molecular-biology resources")
     st.write(
         "VIRASYN directly searches the providers marked as integrated. Other specialist resources are listed "
@@ -802,7 +811,7 @@ with resources_tab:
         "It searches selected public APIs and links users back to source records. Additional adapters can be added modularly."
     )
 
-with analysis_tab:
+if app_section == "🧬 Sequence & structure analysis":
     st.warning(
         "Analysis tools are exploratory. A sequence hit, predicted ORF or structural match "
         "does not establish receptor binding, host range or productive infection."
@@ -972,7 +981,7 @@ with analysis_tab:
         st.download_button("Download complete analysis report (JSON)", report, "virasyn_report.json", "application/json")
 
 
-with about_tab:
+if app_section == "ℹ️ About VIRASYN":
     st.subheader("A unified discovery and analysis workspace for virology")
     st.markdown("""
 VIRASYN brings literature discovery and molecular data retrieval together with sequence and structure analysis.
