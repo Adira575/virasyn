@@ -51,6 +51,16 @@ The Phage Intelligence workspace combines the existing reference-driven RBP disc
 - Optional PDB/mmCIF structure inventory and integrated JSON/CSV exports.
 - Downloadable CSV templates for host evidence and receptor annotations.
 
+
+### Experimental RBP–receptor model laboratory
+- A trainable Random Forest baseline using RBP and receptor amino-acid composition, sequence length and pairwise global-alignment features.
+- Requires an uploaded labelled pair dataset with positive experimental binding labels, experimentally tested non-binding labels and a `split_group` for leakage-resistant holdout evaluation.
+- Reports ROC-AUC, average precision (PR-AUC), balanced accuracy, precision, recall, F1 and confusion matrix.
+- Supports exploratory scoring of unlabelled pairs after training in the active Streamlit session.
+- Model scores are uncalibrated. The application does not ship a pretrained model or claim external validation; training data must be curated and independent validation is still required.
+
+Training schema: `rbp_sequence,receptor_sequence,label,split_group` (optional `pair_id,evidence,citation`). Label 1 means experimentally supported binding; label 0 means experimentally tested non-binding. Unknown pairs must remain unlabeled and must not be converted into negatives.
+
 ### Required CSV schemas
 
 Host evidence requires: `phage_id, host_taxid, host_name, evidence_type, evidence_level, source, citation`.
