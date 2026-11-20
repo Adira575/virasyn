@@ -121,7 +121,7 @@ with database_tab:
             try:
                 with st.spinner("Searching scientific databases..."):
                     if source == "All sources":
-                        bundle = search_all_sources(query.strip(), int((page_number - 1) * 5), 5)
+                        bundle = search_all_sources(query.strip(), int(page_number), 5)
                         st.session_state["virasyn_search_bundle"] = bundle
                         st.session_state["virasyn_search_query"] = query.strip()
                         st.session_state["virasyn_search_source"] = source
@@ -194,18 +194,30 @@ with database_tab:
                     for name, error in bundle["errors"].items():
                         st.warning(f"{name}: {error}")
             total_display = 0
+            ai_context_lines = [f"Research search: {st.session_state.get('virasyn_search_query', '')}"]
             for name, payload in bundle.get("groups", {}).items():
                 records = payload.get("results", [])
                 total_display += len(records)
+                ai_context_lines.append(
+                    f"{name}: {payload.get('count', len(records))} matches; "
+                    + " | ".join(str(item.get("title", item.get("accession", "")))[:180] for item in records[:5])
+                )
                 with st.expander(f"{name} · {payload.get('count', len(records)):,} records", expanded=True):
                     if not records:
                         st.info("No results returned from this source.")
                     for record in records:
                         render_record(record, name)
+            st.session_state["virasyn_ai_context"] = "\\n".join(ai_context_lines)[:5000]
             st.caption(f"Showing up to five results per source · {total_display} records displayed.")
         else:
             result = st.session_state.get("virasyn_search_result", {})
             records = result.get("results", [])
+            ai_titles = " | ".join(str(item.get("title", item.get("accession", "")))[:180] for item in records[:10])
+            st.session_state["virasyn_ai_context"] = (
+                f"Search query: {st.session_state.get('virasyn_search_query', '')}; "
+                f"database: {result.get('source', current_source)}; "
+                f"matching records: {result.get('count', 0)}; example records: {ai_titles}"
+            )[:5000]
             st.metric("Matching records", f"{result.get('count', 0):,}")
             st.caption(f"Source: {result.get('source', current_source)} · Results are retrieved live and cached briefly.")
             if not records:
