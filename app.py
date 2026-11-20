@@ -796,9 +796,9 @@ with alphafold_tab:
     model = st.session_state.get("virasyn_alphafold_model")
     if model:
         st.markdown(f"**UniProt accession:** [{model.get('uniprotAccession', alphafold_accession if 'alphafold_accession' in locals() else '')}](https://www.uniprot.org/uniprotkb/{model.get('uniprotAccession', '')}/entry)")
-        st.markdown(f"**AlphaFold model:** [{model.get('entryId', 'Open model')}]({model.get('modelUrl', 'https://alphafold.ebi.ac.uk/')})")
+        st.markdown(f"**AlphaFold model:** [{model.get('entryId', 'Open model')}]({f\"https://alphafold.ebi.ac.uk/entry/{model.get('uniprotAccession', '')}\"})")
         m1, m2, m3 = st.columns(3)
-        m1.metric("Mean pLDDT", f"{model['confidenceScore']:.1f}" if model.get("confidenceScore") is not None else "Not supplied")
+        m1.metric("Mean pLDDT", f"{float(model.get('globalMetricValue', model.get('confidenceScore'))):.1f}" if model.get('globalMetricValue', model.get('confidenceScore')) is not None else "Not supplied")
         m2.metric("Model version", str(model.get("latestVersion", "Not supplied")))
         m3.metric("UniProt", model.get("uniprotAccession", "—"))
         st.caption("pLDDT is a local confidence estimate (0–100), not experimental validation or a measure of biological activity.")
@@ -851,7 +851,7 @@ with resources_tab:
             ("UniProtKB", "https://www.uniprot.org/", "Integrated · protein knowledgebase"),
             ("InterPro", "https://www.ebi.ac.uk/interpro/", "Integrated · protein families and domains"),
             ("Pfam", "https://www.ebi.ac.uk/interpro/entry/pfam/", "External portal · protein families"),
-            ("AlphaFold Protein Structure Database", "https://alphafold.ebi.ac.uk/", "External portal · predicted protein structures"),
+            ("AlphaFold Protein Structure Database", "https://alphafold.ebi.ac.uk/", "Integrated · retrieve published predicted protein structures by UniProt accession"),
             ("NCBI Conserved Domain Database", "https://www.ncbi.nlm.nih.gov/Structure/cdd/cdd.shtml", "External portal · conserved domains"),
         ],
         "Macromolecular structures": [
