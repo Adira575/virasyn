@@ -1,5 +1,6 @@
 import numpy as np
 from io import BytesIO
+import json
 import zipfile
 import pandas as pd
 import pytest
@@ -161,8 +162,8 @@ def test_rdml_xml_maps_samples_targets_cq_and_curves():
     assert control["Sample description"] == "Control"
     assert control["Target"] == "ACTB"
     assert control["Cq"] == "20.5"
-    assert len(pd.read_json(control["Amplification trace (JSON)"])) == 2
-    assert len(pd.read_json(control["Melt curve trace (JSON)"])) == 2
+    assert len(json.loads(control["Amplification trace (JSON)"])) == 2
+    assert len(json.loads(control["Melt curve trace (JSON)"])) == 2
     assert ntc["Cq"] == "Undetermined"
     assert ntc["Sample role"] == "NTC"
 
