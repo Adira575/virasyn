@@ -50,7 +50,7 @@ div[data-testid="stMetric"] {background:rgba(120,150,170,.08); border:1px solid 
 
 st.caption("An integrated viral research discovery and analysis workspace.")
 
-database_tab, analysis_tab, qpcr_tab, workbench_tab, alphafold_tab, pharis_tab, resources_tab, about_tab = st.tabs(
+database_tab, analysis_tab, qpcr_tab, workbench_tab, alphafold_tab, pharis_tab, phage_tab, resources_tab, about_tab = st.tabs(
     [
         "🔎 Research database",
         "🧬 Sequence & structure analysis",
@@ -58,11 +58,12 @@ database_tab, analysis_tab, qpcr_tab, workbench_tab, alphafold_tab, pharis_tab, 
         "🧰 Bioinformatics workbench",
         "🧬 AlphaFold",
         "🦠 PhARIS RBP intelligence",
+        "🧫 Phage intelligence",
         "📚 Database directory",
         "ℹ️ About VIRASYN",
     ]
 )
-st.caption("Build: virasyn-workspace-ui-2026-11-20-r5")
+st.caption("Build: virasyn-rbp-model-2026-11-20-r7")
 
 def render_record(record: dict, kind: str):
     with st.container(border=True):
@@ -729,6 +730,11 @@ with workbench_tab:
             "Capabilities": "Six-frame ORF screening, local BLASTP against an authorized RBP reference FASTA, identity/query-coverage thresholds, optional cluster metadata and downloadable candidate reports.",
             "Current status": "Available · reference library supplied by user",
         },
+        {
+            "Module": "Bacteria-focused Phage Intelligence",
+            "Capabilities": "Integrated RBP homology discovery, curated bacterial host evidence ranking, exact-ID receptor annotation mapping, structure-file inventory and reproducible exports. Calibrated universal binding prediction and structural docking are not yet implemented.",
+            "Current status": "Partial · evidence integration available",
+        },
     ])
     st.dataframe(
         module_catalogue,
@@ -943,6 +949,268 @@ with pharis_tab:
         "[PhARIS study](https://doi.org/10.1016/j.celrep.2025.115369)"
     )
 
+
+
+with phage_tab:
+    st.subheader("VIRASYN Phage Intelligence · Bacteria")
+    st.write(
+        "An integrated research workflow connecting candidate RBP discovery, curated receptor annotations, "
+        "bacterial host-interaction evidence and structure intake. Use a broad, versioned RBP reference library "
+        "covering the bacterial taxa relevant to your study."
+    )
+    st.warning(
+        "This release produces reference-supported RBP candidates and evidence-ranked host/receptor hypotheses. "
+        "It does not contain a universal, trained RBP–receptor binding model. Evidence indices are not probabilities; "
+        "sequence homology does not prove receptor binding, adsorption or productive infection."
+    )
+    from virasyn.pharis import analyse_pharis_genome, reference_fasta_manifest
+    from virasyn.phage_intelligence import build_integrated_report, csv_template
+
+    with st.expander("Workflow and evidence model", expanded=False):
+        st.markdown("""
+**Analysis stages**
+1. Translate uploaded bacteriophage genome records in six frames and screen ORFs against a user-authorized RBP reference library using BLASTP.
+2. Attach reference metadata such as RBP family, cluster, bacterial host and receptor.
+3. Integrate independently curated phage–bacterium evidence (experimental infection/host range, adsorption, receptor binding, CRISPR and computational evidence).
+4. Map RBP reference identifiers to receptor annotations and rank the evidence transparently.
+5. Inspect optional RBP/receptor coordinate files and export analysis tables for downstream structural work.
+
+**Evidence vocabulary**
+- evidence_level: experimental, curated, computational or inferred.
+- evidence_type: productive_infection, host_range, adsorption, receptor_binding, crispr_spacer, sequence_similarity or another explicitly labelled type.
+- The host evidence index is a transparent weighted evidence summary, not a calibrated probability or an ML prediction.
+""")
+
+    phage_genome = st.file_uploader(
+        "Bacteriophage genome FASTA (one or multiple records)",
+        type=["fa", "fasta", "fna", "fas"], key="phageintel_genome"
+    )
+    rbp_reference = st.file_uploader(
+        "Broad-spectrum RBP reference protein FASTA",
+        type=["fa", "fasta", "faa", "fas"], key="phageintel_rbp_reference",
+        help="Use a curated, permission-cleared library with coverage across your target bacterial groups."
+    )
+    rbp_metadata = st.file_uploader(
+        "Optional RBP reference metadata CSV", type=["csv"], key="phageintel_rbp_metadata",
+        help="Must include subject_id matching reference FASTA IDs. Suggested: cluster, RBP_name, strain, receptor, evidence, citation, source_version."
+    )
+    host_evidence_file = st.file_uploader(
+        "Optional phage–bacterial host evidence CSV", type=["csv"], key="phageintel_host_evidence"
+    )
+    receptor_file = st.file_uploader(
+        "Optional RBP–receptor annotation CSV", type=["csv"], key="phageintel_receptor_map"
+    )
+
+    t1, t2 = st.columns(2)
+    with t1:
+        st.download_button("Download host-evidence CSV template", csv_template("host"),
+                           "virasyn_host_evidence_template.csv", "text/csv")
+    with t2:
+        st.download_button("Download RBP–receptor CSV template", csv_template("receptor"),
+                           "virasyn_rbp_receptor_template.csv", "text/csv")
+
+    if rbp_reference is not None:
+        try:
+            ref_manifest = reference_fasta_manifest(rbp_reference.getvalue().decode("utf-8"))
+            st.caption(f"RBP reference inventory: {len(ref_manifest)} protein sequences.")
+            with st.expander("Inspect reference inventory"):
+                st.dataframe(ref_manifest, use_container_width=True, hide_index=True)
+        except (UnicodeDecodeError, ValueError) as exc:
+            st.error(f"RBP reference library is invalid: {exc}")
+
+    a1, a2, a3 = st.columns(3)
+    with a1:
+        intel_min_aa = st.number_input("Minimum translated ORF (aa)", min_value=30, max_value=2000, value=80, step=10, key="intel_min_aa")
+    with a2:
+        intel_identity = st.slider("Minimum RBP identity (%)", 30, 100, 35, key="intel_identity")
+    with a3:
+        intel_coverage = st.slider("Minimum query coverage (%)", 30, 100, 40, key="intel_coverage")
+    intel_code = st.selectbox("Translation table", [11, 4, 1], index=0, key="intel_genetic_code")
+
+    structure_uploads = st.file_uploader(
+        "Optional RBP/receptor structure files for inventory (PDB or mmCIF)",
+        type=["pdb", "ent", "cif", "mmcif"], accept_multiple_files=True, key="phageintel_structures"
+    )
+
+    if st.button("Run integrated phage intelligence", type="primary", use_container_width=True,
+                 disabled=(phage_genome is None or rbp_reference is None), key="run_phage_intelligence"):
+        try:
+            with st.spinner("Screening ORFs against the RBP reference library and integrating evidence..."):
+                discovery = analyse_pharis_genome(
+                    phage_genome.getvalue().decode("utf-8"),
+                    rbp_reference.getvalue().decode("utf-8"),
+                    rbp_metadata.getvalue().decode("utf-8") if rbp_metadata else None,
+                    min_orf_aa=int(intel_min_aa), min_identity=float(intel_identity),
+                    min_query_coverage=float(intel_coverage), genetic_code=int(intel_code),
+                )
+                integrated = build_integrated_report(
+                    discovery["candidate_hits"],
+                    host_evidence_file.getvalue().decode("utf-8") if host_evidence_file else None,
+                    receptor_file.getvalue().decode("utf-8") if receptor_file else None,
+                )
+                structure_inventory = []
+                for structure_file in (structure_uploads or []):
+                    try:
+                        structure_inventory.append(parse_structure(
+                            structure_file.getvalue().decode("utf-8", errors="replace"), structure_file.name
+                        ))
+                    except Exception as structure_error:
+                        structure_inventory.append({"file": structure_file.name, "error": str(structure_error)})
+                st.session_state["virasyn_phage_intelligence"] = {
+                    "discovery": discovery, "integrated": integrated,
+                    "structure_inventory": structure_inventory,
+                }
+            st.success("Integrated analysis completed.")
+        except (UnicodeDecodeError, ValueError, RuntimeError) as exc:
+            st.error(f"Phage intelligence workflow failed: {exc}")
+
+    result = st.session_state.get("virasyn_phage_intelligence")
+    if result:
+        discovery, integrated = result["discovery"], result["integrated"]
+        summary = discovery["summary"]
+        metrics = st.columns(4)
+        metrics[0].metric("Genome records", summary["genome_records"])
+        metrics[1].metric("ORFs screened", summary["orfs_screened"])
+        metrics[2].metric("RBP reference hits", summary["blast_hits"])
+        metrics[3].metric("Candidate ORFs", summary["candidate_orfs"])
+        st.caption(
+            f"Discovery thresholds: ORF ≥ {summary['min_orf_aa']} aa · identity ≥ {summary['min_identity']}% · "
+            f"query coverage ≥ {summary['min_query_coverage']}% · translation table {summary['genetic_code']}"
+        )
+
+        st.markdown("### 1 · RBP discovery and classification")
+        if discovery["candidate_hits"].empty:
+            st.info("No RBP homologues passed the selected thresholds. This does not exclude divergent RBPs or candidates absent from the reference library.")
+        else:
+            st.dataframe(discovery["candidate_hits"], use_container_width=True, hide_index=True)
+        st.download_button("Export RBP candidate table", discovery["candidate_hits"].to_csv(index=False),
+                           "virasyn_rbp_candidates.csv", "text/csv")
+        st.download_button("Export all sequence-similarity hits", discovery["all_hits"].to_csv(index=False),
+                           "virasyn_rbp_all_hits.csv", "text/csv")
+
+        st.markdown("### 2 · Bacterial host evidence ranking")
+        host_table = integrated["host_evidence"]
+        if host_table.empty:
+            st.info("No host evidence table was supplied. Upload curated phage–host evidence to rank known bacterial associations.")
+        else:
+            st.dataframe(host_table, use_container_width=True, hide_index=True)
+            st.download_button("Export host evidence ranking", host_table.to_csv(index=False),
+                               "virasyn_bacterial_host_evidence.csv", "text/csv")
+            st.caption(
+                f"{integrated['host_summary']['unique_hosts']} bacterial taxa · "
+                f"{integrated['host_summary']['experimental_records']} experimental evidence records. "
+                "Evidence index is not a probability."
+            )
+
+        st.markdown("### 3 · RBP–receptor specificity evidence")
+        receptor_table = integrated["rbp_receptor_evidence"]
+        if receptor_table.empty:
+            st.info("No receptor annotations were mapped. Supply an annotation CSV whose subject_id values exactly match RBP reference FASTA identifiers.")
+        else:
+            st.dataframe(receptor_table, use_container_width=True, hide_index=True)
+            st.download_button("Export RBP–receptor evidence", receptor_table.to_csv(index=False),
+                               "virasyn_rbp_receptor_evidence.csv", "text/csv")
+
+        st.markdown("### 4 · Structural data inventory")
+        structures = result["structure_inventory"]
+        if structures:
+            st.dataframe(pd.DataFrame(structures), use_container_width=True, hide_index=True)
+        else:
+            st.caption("No optional structure files were supplied. Use the AlphaFold tab for available UniProt models; structural similarity and docking are planned extensions.")
+
+        st.markdown("### 5 · Interpretation and reproducibility")
+        st.warning(integrated["interpretation"])
+        report = {
+            "platform": "VIRASYN", "module": "Bacteria-focused phage intelligence",
+            "discovery_summary": summary, "host_evidence_summary": integrated["host_summary"],
+            "candidate_rbps": discovery["candidate_hits"].to_dict(orient="records"),
+            "host_evidence": host_table.to_dict(orient="records"),
+            "rbp_receptor_evidence": receptor_table.to_dict(orient="records"),
+            "structure_inventory": structures,
+            "limitations": [integrated["interpretation"], "No calibrated universal RBP–receptor binding model is included in this release."],
+        }
+        st.download_button("Download integrated JSON research report", json.dumps(report, indent=2, default=str),
+                           "virasyn_phage_intelligence_report.json", "application/json")
+
+
+    st.divider()
+    st.subheader("VIRASYN RBP–receptor model laboratory")
+    st.write(
+        "Train a transparent baseline classifier from experimentally labelled RBP–receptor pairs. "
+        "Training is disabled until you provide a curated dataset; no synthetic or guessed labels are used."
+    )
+    from virasyn.rbp_model import training_template, train_group_heldout_model, predict_pairs
+
+    st.warning(
+        "Use label 1 only for experimentally supported binding and label 0 only for experimentally tested non-binding. "
+        "Unknown pairs are not negatives. The model uses group-held-out evaluation by split_group and reports "
+        "uncalibrated scores. A local holdout is preliminary, not independent external validation."
+    )
+    st.download_button(
+        "Download model training CSV template",
+        training_template(), "virasyn_rbp_receptor_training_template.csv", "text/csv"
+    )
+    model_training_file = st.file_uploader(
+        "Upload labelled RBP–receptor training pairs CSV",
+        type=["csv"], key="virasyn_model_training_pairs"
+    )
+    if st.button(
+        "Train and evaluate VIRASYN baseline model",
+        type="primary", disabled=model_training_file is None,
+        key="virasyn_train_rbp_model",
+    ):
+        try:
+            with st.spinner("Extracting pair features and evaluating on held-out groups..."):
+                trained = train_group_heldout_model(model_training_file.getvalue().decode("utf-8"))
+            st.session_state["virasyn_rbp_pair_model"] = trained["model"]
+            st.session_state["virasyn_rbp_pair_metrics"] = trained["metrics"]
+            st.session_state["virasyn_rbp_pair_test_predictions"] = trained["test_predictions"]
+            st.success("Preliminary group-held-out model evaluation completed.")
+        except (UnicodeDecodeError, ValueError, RuntimeError) as exc:
+            st.error(f"Model training/evaluation could not be completed: {exc}")
+
+    trained_metrics = st.session_state.get("virasyn_rbp_pair_metrics")
+    if trained_metrics:
+        st.markdown("**Group-held-out evaluation metrics**")
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("ROC-AUC", f"{trained_metrics['roc_auc']:.3f}")
+        metric_cols[1].metric("PR-AUC", f"{trained_metrics['average_precision']:.3f}")
+        metric_cols[2].metric("Balanced accuracy", f"{trained_metrics['balanced_accuracy']:.3f}")
+        metric_cols[3].metric("F1", f"{trained_metrics['f1']:.3f}")
+        st.caption(
+            f"{trained_metrics['n_pairs']} pairs · {trained_metrics['n_train']} train · "
+            f"{trained_metrics['n_test']} held-out · {trained_metrics['n_groups_train']} train groups · "
+            f"{trained_metrics['n_groups_test']} test groups"
+        )
+        st.write("Confusion matrix (true labels 0,1 × predicted labels 0,1)")
+        st.dataframe(pd.DataFrame(
+            trained_metrics["confusion_matrix"],
+            index=["True 0", "True 1"], columns=["Predicted 0", "Predicted 1"]
+        ))
+        st.dataframe(st.session_state["virasyn_rbp_pair_test_predictions"], use_container_width=True, hide_index=True)
+        st.warning(
+            "This is a preliminary internal holdout score from the uploaded dataset. It is not calibrated, "
+            "does not establish causal binding, and must not be presented as external validation or as a "
+            "general-purpose host-range probability."
+        )
+
+        prediction_file = st.file_uploader(
+            "Optional unlabelled RBP–receptor pairs for exploratory scoring",
+            type=["csv"], key="virasyn_model_prediction_pairs"
+        )
+        if prediction_file is not None:
+            try:
+                scored = predict_pairs(
+                    st.session_state["virasyn_rbp_pair_model"],
+                    prediction_file.getvalue().decode("utf-8"),
+                )
+                st.dataframe(scored, use_container_width=True, hide_index=True)
+                st.download_button(
+                    "Download exploratory pair scores", scored.to_csv(index=False),
+                    "virasyn_exploratory_rbp_receptor_scores.csv", "text/csv"
+                )
+            except (UnicodeDecodeError, ValueError) as exc:
+                st.error(f"Pair scoring failed: {exc}")
 
 
 with resources_tab:
@@ -1187,16 +1455,17 @@ VIRASYN brings literature discovery and molecular data retrieval together with s
 - UniProtKB and InterPro.
 - AlphaFold Protein Structure Database — published protein structure predictions, confidence metadata and coordinate downloads.
 - PhARIS-inspired RBP intelligence — independent local six-frame ORF and BLASTP workflow using an authorized user-supplied reference library.
+- Bacteria-focused Phage Intelligence — integrated RBP, receptor-annotation and curated bacterial host-evidence analysis.
 
 VIRASYN retrieves records from upstream APIs when you search. It does not own, replace or mirror those databases. The Database Directory also links to specialist portals that are not yet directly queried by the app.
 """)
     st.subheader("Scientific interpretation")
     st.markdown("""
-VIRASYN is not yet a universal virus-host prediction system. Bacteriophage RBPs, animal-virus attachment/entry proteins and plant-virus host interactions require separate training data and methods. Sequence similarity, attachment, receptor binding, host range and productive infection are distinct levels of evidence.
+VIRASYN is a bacteria-focused phage research platform. Its current Phage Intelligence module integrates reference-supported RBP homology with supplied host and receptor evidence; it is not yet a universal or calibrated RBP–receptor binding predictor. Sequence similarity, attachment, receptor binding, host range and productive infection are distinct levels of evidence.
 """)
     st.subheader("Development roadmap")
     st.markdown("""
-The PhARIS-inspired module is an independent implementation and does not bundle the original PhARIS reference sequences. Use only reference datasets you are authorized to use. Homology matches do not establish adsorption, receptor binding, infection or therapeutic suitability.
+The PhARIS-inspired module is an independent implementation and does not bundle the original PhARIS reference sequences. The new bacteria-focused Phage Intelligence module adds evidence-ranked host and receptor hypotheses using researcher-supplied, provenance-tracked CSVs. Use only reference datasets you are authorized to use. Homology matches and evidence indices do not establish adsorption, receptor binding, infection or therapeutic suitability.
 
 The next major development goal is to move VIRASYN towards a comprehensive viral research
 knowledgebase through these planned capabilities:

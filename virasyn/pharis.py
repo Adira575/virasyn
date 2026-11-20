@@ -115,7 +115,7 @@ def analyse_pharis_genome(
             detail = (exc.stderr or exc.stdout or str(exc))[-2000:]
             raise RuntimeError(f"BLAST+ failed: {detail}") from exc
         if output_path.exists() and output_path.stat().st_size:
-            hits = pd.read_csv(output_path, sep="\\t", names=BLAST_FIELDS)
+            hits = pd.read_csv(output_path, sep="\t", names=BLAST_FIELDS)
         else:
             hits = pd.DataFrame(columns=BLAST_FIELDS)
 
