@@ -36,6 +36,8 @@ Publication: https://doi.org/10.1016/j.celrep.2025.115369
 
 ## Bacteria-focused Phage Intelligence
 
+See the [detailed architecture and validation plan](docs/PHAGE_INTELLIGENCE_ARCHITECTURE.md) for the data contracts, evidence model, current boundaries and model-development roadmap.
+
 The Phage Intelligence workspace combines the existing reference-driven RBP discovery workflow with an evidence integration layer for bacterial host and receptor hypotheses.
 
 ### Current implemented capabilities
