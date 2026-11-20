@@ -857,6 +857,12 @@ with pharis_tab:
         "Optional reference annotation CSV", type=["csv"], key="pharis_metadata",
         help="Optional columns: subject_id (must match FASTA record IDs), cluster, RBP_name, strain, receptor, evidence, citation.",
     )
+    st.download_button(
+        "Download reference metadata template",
+        "subject_id,cluster,RBP_name,strain,receptor,evidence,citation,source_version\\n",
+        "virasyn_rbp_reference_metadata_template.csv",
+        "text/csv",
+    )
     if ph_reference is not None:
         try:
             manifest = reference_fasta_manifest(ph_reference.getvalue().decode("utf-8"))
