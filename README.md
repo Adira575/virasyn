@@ -48,15 +48,15 @@ The Bioinformatics Workbench page in the app presents this module catalogue. Sta
 
 | Module | Capabilities | Current status |
 |---|---|---|
-| Genome analysis | FASTA import, sequence summaries, GC content, six-frame ORF screening and downloadable ORFs. FASTQ QC, FastQC and automated genome annotation are planned. | Partial |
-| Sequence analysis | BLASTP against user-provided protein references and federated sequence-database discovery. Multiple sequence alignment and phylogenetics are planned. | Partial |
-| Protein analysis | Physicochemical properties and optional HMMER profile scanning. Automated motif/domain and richer functional annotation are planned. | Partial |
-| Structural bioinformatics | PDB/mmCIF metadata parsing and PDB 3D visualization. Structural alignment, TM-align and RMSD comparison are planned. | Partial |
-| Molecular docking | Protein/ligand preparation, docking, pose scoring and interaction analysis. | Planned |
+| Genome analysis | FASTA import, sequence summaries, GC content, six-frame ORF screening and downloadable ORFs. FASTQ quality control, FastQC integration and automated genome annotation are planned. | Partial |
+| Sequence analysis | BLASTP against user-provided protein references and federated sequence-database discovery. Multiple sequence alignment and phylogenetic analysis are planned. | Partial |
+| Protein analysis | Protein physicochemical properties and optional HMMER profile scanning with user-provided HMM libraries. Automated motif/domain annotation and richer functional annotation are planned. | Partial |
+| Structural bioinformatics | PDB/mmCIF metadata parsing and PDB 3D visualization. Structural alignment, TM-align integration and RMSD comparison are planned. | Partial |
+| Molecular docking | Protein and ligand preparation, docking workflows, pose scoring and protein–ligand interaction analysis. | Planned |
 | Transcriptomics | RNA-seq quality control, differential expression, PCA, volcano plots and heatmaps. | Planned |
-| Comparative genomics | Genome comparison, gene conservation, orthology and synteny analysis. | Planned |
-| Virology | Viral literature, genome, protein and taxonomy discovery plus preliminary sequence characterization. Validated attachment-protein workflows and virus–host evidence integration are planned. | Partial |
-| Data visualization | Analysis tables, qPCR charts and PDB viewing. Publication-ready plots, PCA, volcano plots and heatmaps are planned. | Partial |
+| Comparative genomics | Genome-to-genome comparison, gene conservation, orthology and synteny analysis, with automated annotation links. | Planned |
+| Virology | Viral literature, genome, protein and taxonomy discovery plus preliminary sequence characterization. Validated candidate attachment-protein workflows and virus–host evidence integration remain planned. | Partial |
+| Data visualization | Analysis tables, qPCR fold-change charts and interactive PDB viewing. Publication-ready figure templates, PCA plots, volcano plots and heatmaps are planned. | Partial |
 | PCR / qPCR analysis | RDML and tabular Cq/Ct import, technical-replicate QC, standard curves, efficiency-aware relative expression, NTC flags and Excel/CSV reports. | Available |
 
 ### Next five development priorities
