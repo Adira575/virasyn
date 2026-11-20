@@ -60,7 +60,7 @@ def score_host_evidence(host_evidence_csv: str) -> tuple[pd.DataFrame, dict]:
     frame["host_name"] = frame["host_name"].astype(str).str.strip()
     if (frame["host_taxid"] == "").any() or (frame["host_name"] == "").any():
         raise ValueError("Every host evidence row needs host_taxid and host_name.")
-    ranked = frame.groupby(["host_taxid", "host_name"], as_index=False).agg(
+    ranked = frame.groupby(["phage_id", "host_taxid", "host_name"], as_index=False).agg(
         evidence_index=("evidence_weight", "sum"),
         evidence_records=("evidence_weight", "size"),
         experimental_records=("evidence_level_norm", lambda x: int((x == "experimental").sum())),
@@ -68,7 +68,7 @@ def score_host_evidence(host_evidence_csv: str) -> tuple[pd.DataFrame, dict]:
         sources=("source", lambda x: "; ".join(sorted(set(v for v in x if v)))),
         citations=("citation", lambda x: "; ".join(sorted(set(v for v in x if v)))),
     )
-    ranked = ranked.sort_values(["experimental_records", "evidence_index", "evidence_records"], ascending=False)
+    ranked = ranked.sort_values(["phage_id", "experimental_records", "evidence_index", "evidence_records"], ascending=[True, False, False, False])
     ranked["evidence_tier"] = ranked.apply(
         lambda row: "Experimental support present" if row["experimental_records"] else
         ("Multiple non-experimental records" if row["evidence_records"] > 1 else "Single non-experimental record"),
