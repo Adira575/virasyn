@@ -23,6 +23,17 @@ The Database Directory also links to specialist resources including ICTV taxonom
 
 VIRASYN retrieves results from upstream providers and links to the source records. It does not mirror or replace those databases. Data coverage, licensing, citation requirements and query syntax differ by provider.
 
+## PhARIS-inspired RBP intelligence
+
+VIRASYN includes an independent, reference-driven workflow inspired by the published PhARIS method for screening bacteriophage genomes for candidate receptor-binding proteins associated with *Staphylococcus aureus*. It accepts a phage genome FASTA, an authorized RBP protein reference FASTA, and optional reference metadata CSV. The workflow screens six reading frames for start-to-stop ORFs, builds a temporary local BLASTP database, compares candidate proteins to the supplied reference library, calculates query and subject coverage, applies configurable identity/coverage thresholds, and exports candidate and all-hit tables.
+
+The optional metadata CSV must include a `subject_id` column matching the reference FASTA record identifiers. Suggested additional columns are `cluster`, `RBP_name`, `strain`, `receptor`, `evidence`, and `citation`. The reference FASTA and its provenance/version should be maintained by the researcher. VIRASYN does not redistribute the original PhARIS reference sequences or notebook; obtain permission and follow the source terms before using those materials.
+
+This workflow is a homology screen, not a validated binding-specificity predictor. Sequence similarity does not establish adsorption, receptor binding, productive infection, host range, or therapeutic suitability. Experimental validation is required. NCBI BLAST+ is needed; it is installed through `packages.txt` on Streamlit Community Cloud and in the Docker image.
+
+Original project: https://github.com/JKrusche1/PhARIS  
+Publication: https://doi.org/10.1016/j.celrep.2025.115369
+
 ## AlphaFold protein structure lookup
 
 The AlphaFold tab retrieves published predictions from the AlphaFold Protein Structure Database by UniProt accession. It displays available model metadata and the global confidence metric (pLDDT where supplied), supports PDB and mmCIF coordinate downloads, and renders PDB coordinates in the built-in 3D viewer. The app links to the official AlphaFold Server for submitting new sequence-prediction jobs; VIRASYN does not run AlphaFold inference itself. A predicted structure and its confidence scores are not experimental validation.
@@ -89,7 +100,7 @@ assumed to cover bacteriophages, animal viruses and plant viruses.
 
 ## Navigation
 
-The main workspace is organized into seven sections: Research database, Sequence & structure analysis, PCR / qPCR analysis, Bioinformatics workbench, AlphaFold, Database directory and About VIRASYN.
+The main workspace is organized into eight sections: Research database, Sequence & structure analysis, PCR / qPCR analysis, Bioinformatics workbench, AlphaFold, PhARIS RBP intelligence, Database directory and About VIRASYN.
 
 ## Sequence and structure analysis
 
