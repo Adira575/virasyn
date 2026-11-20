@@ -34,6 +34,8 @@ def test_qpcr_import_keeps_undetermined_as_missing_not_zero():
     assert pd.isna(wells.loc[0, "Cq"])
     assert wells.loc[0, "detected"] is False or not bool(wells.loc[0, "detected"])
     assert wells.loc[1, "Cq"] == pytest.approx(28.4)
+    assert wells.loc[0, "source_row"] == 2
+    assert wells.loc[0, "raw_Cq"] == "Undetermined"
 
 
 def test_efficiency_corrected_relative_expression_and_ntc_exclusion():
@@ -96,3 +98,15 @@ def test_csv_loader_reads_instrument_export():
     frame = read_qpcr_table(content, "plate.csv")
     assert list(frame.columns) == ["Sample", "Target", "Cq"]
     assert len(frame) == 2
+
+def test_single_technical_well_is_flagged_as_unreplicated():
+    frame = pd.DataFrame([
+        {"Sample": "C1", "Condition": "Control", "Target": "ACTB", "Cq": 20.0},
+        {"Sample": "C1", "Condition": "Control", "Target": "GeneA", "Cq": 25.0},
+    ])
+    wells = normalise_qpcr_wells(frame, "Sample", "Target", "Cq", "Condition")
+    result = analyse_relative_expression(
+        wells, ["ACTB"], "Control", {"ACTB": 100.0, "GeneA": 100.0}
+    )
+    gene_qc = result["technical_qc"].query("target == 'GeneA'").iloc[0]
+    assert "Single detected well" in gene_qc["technical_qc"]
