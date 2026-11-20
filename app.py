@@ -63,7 +63,7 @@ database_tab, analysis_tab, qpcr_tab, workbench_tab, alphafold_tab, pharis_tab, 
         "ℹ️ About VIRASYN",
     ]
 )
-st.caption("Build: virasyn-phage-intelligence-2026-11-20-r6")
+st.caption("Build: virasyn-rbp-model-2026-11-20-r7")
 
 def render_record(record: dict, kind: str):
     with st.container(border=True):
@@ -1131,6 +1131,86 @@ with phage_tab:
         }
         st.download_button("Download integrated JSON research report", json.dumps(report, indent=2, default=str),
                            "virasyn_phage_intelligence_report.json", "application/json")
+
+
+    st.divider()
+    st.subheader("VIRASYN RBP–receptor model laboratory")
+    st.write(
+        "Train a transparent baseline classifier from experimentally labelled RBP–receptor pairs. "
+        "Training is disabled until you provide a curated dataset; no synthetic or guessed labels are used."
+    )
+    from virasyn.rbp_model import training_template, train_group_heldout_model, predict_pairs
+
+    st.warning(
+        "Use label 1 only for experimentally supported binding and label 0 only for experimentally tested non-binding. "
+        "Unknown pairs are not negatives. The model uses group-held-out evaluation by split_group and reports "
+        "uncalibrated scores. A local holdout is preliminary, not independent external validation."
+    )
+    st.download_button(
+        "Download model training CSV template",
+        training_template(), "virasyn_rbp_receptor_training_template.csv", "text/csv"
+    )
+    model_training_file = st.file_uploader(
+        "Upload labelled RBP–receptor training pairs CSV",
+        type=["csv"], key="virasyn_model_training_pairs"
+    )
+    if st.button(
+        "Train and evaluate VIRASYN baseline model",
+        type="primary", disabled=model_training_file is None,
+        key="virasyn_train_rbp_model",
+    ):
+        try:
+            with st.spinner("Extracting pair features and evaluating on held-out groups..."):
+                trained = train_group_heldout_model(model_training_file.getvalue().decode("utf-8"))
+            st.session_state["virasyn_rbp_pair_model"] = trained["model"]
+            st.session_state["virasyn_rbp_pair_metrics"] = trained["metrics"]
+            st.session_state["virasyn_rbp_pair_test_predictions"] = trained["test_predictions"]
+            st.success("Preliminary group-held-out model evaluation completed.")
+        except (UnicodeDecodeError, ValueError, RuntimeError) as exc:
+            st.error(f"Model training/evaluation could not be completed: {exc}")
+
+    trained_metrics = st.session_state.get("virasyn_rbp_pair_metrics")
+    if trained_metrics:
+        st.markdown("**Group-held-out evaluation metrics**")
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("ROC-AUC", f"{trained_metrics['roc_auc']:.3f}")
+        metric_cols[1].metric("PR-AUC", f"{trained_metrics['average_precision']:.3f}")
+        metric_cols[2].metric("Balanced accuracy", f"{trained_metrics['balanced_accuracy']:.3f}")
+        metric_cols[3].metric("F1", f"{trained_metrics['f1']:.3f}")
+        st.caption(
+            f"{trained_metrics['n_pairs']} pairs · {trained_metrics['n_train']} train · "
+            f"{trained_metrics['n_test']} held-out · {trained_metrics['n_groups_train']} train groups · "
+            f"{trained_metrics['n_groups_test']} test groups"
+        )
+        st.write("Confusion matrix (true labels 0,1 × predicted labels 0,1)")
+        st.dataframe(pd.DataFrame(
+            trained_metrics["confusion_matrix"],
+            index=["True 0", "True 1"], columns=["Predicted 0", "Predicted 1"]
+        ))
+        st.dataframe(st.session_state["virasyn_rbp_pair_test_predictions"], use_container_width=True, hide_index=True)
+        st.warning(
+            "This is a preliminary internal holdout score from the uploaded dataset. It is not calibrated, "
+            "does not establish causal binding, and must not be presented as external validation or as a "
+            "general-purpose host-range probability."
+        )
+
+        prediction_file = st.file_uploader(
+            "Optional unlabelled RBP–receptor pairs for exploratory scoring",
+            type=["csv"], key="virasyn_model_prediction_pairs"
+        )
+        if prediction_file is not None:
+            try:
+                scored = predict_pairs(
+                    st.session_state["virasyn_rbp_pair_model"],
+                    prediction_file.getvalue().decode("utf-8"),
+                )
+                st.dataframe(scored, use_container_width=True, hide_index=True)
+                st.download_button(
+                    "Download exploratory pair scores", scored.to_csv(index=False),
+                    "virasyn_exploratory_rbp_receptor_scores.csv", "text/csv"
+                )
+            except (UnicodeDecodeError, ValueError) as exc:
+                st.error(f"Pair scoring failed: {exc}")
 
 
 with resources_tab:
