@@ -50,18 +50,19 @@ div[data-testid="stMetric"] {background:rgba(120,150,170,.08); border:1px solid 
 
 st.caption("An integrated viral research discovery and analysis workspace.")
 
-database_tab, analysis_tab, qpcr_tab, workbench_tab, alphafold_tab, resources_tab, about_tab = st.tabs(
+database_tab, analysis_tab, qpcr_tab, workbench_tab, alphafold_tab, pharis_tab, resources_tab, about_tab = st.tabs(
     [
         "🔎 Research database",
         "🧬 Sequence & structure analysis",
         "🧪 PCR / qPCR analysis",
         "🧰 Bioinformatics workbench",
         "🧬 AlphaFold",
+        "🦠 PhARIS RBP intelligence",
         "📚 Database directory",
         "ℹ️ About VIRASYN",
     ]
 )
-st.caption("Build: virasyn-workspace-ui-2026-11-20-r3")
+st.caption("Build: virasyn-workspace-ui-2026-11-20-r4")
 
 def render_record(record: dict, kind: str):
     with st.container(border=True):
@@ -823,6 +824,113 @@ with alphafold_tab:
             st.error(f"Could not retrieve model coordinates: {exc}")
 
     st.markdown("[Open AlphaFold Protein Structure Database](https://alphafold.ebi.ac.uk/) · [Open AlphaFold Server for new sequence predictions](https://alphafoldserver.com/)")
+
+
+
+
+with pharis_tab:
+    st.subheader("PhARIS-inspired RBP intelligence")
+    st.write(
+        "Screen phage genomes for candidate receptor-binding proteins (RBPs), then compare "
+        "translated ORFs against an authorized, versioned RBP reference FASTA using local BLASTP."
+    )
+    st.info(
+        "This is an independent, reference-driven workflow inspired by the published PhARIS approach. "
+        "It does not include the original PhARIS reference sequences. Upload a reference library you are "
+        "authorized to use. Sequence similarity is not proof of receptor binding, adsorption or productive infection."
+    )
+
+    from virasyn.pharis import analyse_pharis_genome, reference_fasta_manifest
+
+    ph_genome = st.file_uploader(
+        "Upload phage genome FASTA", type=["fa", "fasta", "fna", "fas"], key="pharis_genome"
+    )
+    ph_reference = st.file_uploader(
+        "Upload authorized RBP reference protein FASTA", type=["fa", "fasta", "faa", "fas"], key="pharis_reference"
+    )
+    ph_metadata = st.file_uploader(
+        "Optional reference annotation CSV", type=["csv"], key="pharis_metadata",
+        help="Optional columns: subject_id (must match FASTA record IDs), cluster, RBP_name, strain, receptor, evidence, citation.",
+    )
+    if ph_reference is not None:
+        try:
+            manifest = reference_fasta_manifest(ph_reference.getvalue().decode("utf-8"))
+            st.caption(f"Reference library loaded: {len(manifest)} protein sequences.")
+            with st.expander("Reference library inventory"):
+                st.dataframe(manifest, use_container_width=True, hide_index=True)
+        except (UnicodeDecodeError, ValueError) as exc:
+            st.error(f"Reference FASTA could not be read: {exc}")
+
+    p1, p2, p3 = st.columns(3)
+    with p1:
+        ph_min_aa = st.number_input("Minimum ORF length (aa)", min_value=30, max_value=2000, value=100, step=10)
+    with p2:
+        ph_min_identity = st.slider("Minimum sequence identity (%)", min_value=30, max_value=100, value=80)
+    with p3:
+        ph_min_coverage = st.slider("Minimum query coverage (%)", min_value=30, max_value=100, value=80)
+    ph_code = st.selectbox("NCBI genetic code", [11, 4, 1], index=0, help="11 = bacterial, archaeal and plant plastid; select the code appropriate to the phage.")
+
+    if st.button("Run RBP discovery workflow", type="primary", use_container_width=True, disabled=(ph_genome is None or ph_reference is None)):
+        try:
+            with st.spinner("Translating six reading frames and running BLASTP against the reference library..."):
+                ph_result = analyse_pharis_genome(
+                    ph_genome.getvalue().decode("utf-8"),
+                    ph_reference.getvalue().decode("utf-8"),
+                    ph_metadata.getvalue().decode("utf-8") if ph_metadata is not None else None,
+                    min_orf_aa=int(ph_min_aa),
+                    min_identity=float(ph_min_identity),
+                    min_query_coverage=float(ph_min_coverage),
+                    genetic_code=int(ph_code),
+                )
+            st.session_state["virasyn_pharis_result"] = ph_result
+            st.success("RBP homology screening completed.")
+        except (UnicodeDecodeError, ValueError, RuntimeError) as exc:
+            st.error(f"RBP analysis could not be completed: {exc}")
+
+    ph_result = st.session_state.get("virasyn_pharis_result")
+    if ph_result:
+        summary = ph_result["summary"]
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Genome records", summary["genome_records"])
+        c2.metric("ORFs screened", summary["orfs_screened"])
+        c3.metric("BLAST hits", summary["blast_hits"])
+        c4.metric("Candidate ORFs", summary["candidate_orfs"])
+        st.caption(
+            f"Parameters: minimum {summary['min_orf_aa']} aa · identity ≥ {summary['min_identity']}% · "
+            f"query coverage ≥ {summary['min_query_coverage']}% · genetic code {summary['genetic_code']}"
+        )
+        st.markdown("**Top reference-supported candidate matches**")
+        candidates = ph_result["candidate_hits"]
+        if candidates.empty:
+            st.info("No matches passed the selected identity and query-coverage thresholds. This does not exclude an RBP; the reference library may be incomplete or divergent.")
+        else:
+            display_cols = [c for c in [
+                "qseqid", "sequence_id", "strand", "frame", "start_1based", "end_1based",
+                "sseqid", "pident", "query_coverage_pct", "subject_coverage_pct",
+                "evalue", "bitscore", "cluster", "RBP_name", "strain", "receptor", "evidence", "citation"
+            ] if c in candidates.columns]
+            st.dataframe(candidates[display_cols], use_container_width=True, hide_index=True)
+        st.download_button(
+            "Download all BLASTP hits (CSV)",
+            ph_result["all_hits"].to_csv(index=False),
+            "virasyn_pharis_all_hits.csv",
+            "text/csv",
+        )
+        st.download_button(
+            "Download screened ORFs (CSV)",
+            ph_result["orfs"].to_csv(index=False),
+            "virasyn_pharis_orfs.csv",
+            "text/csv",
+        )
+        st.warning(
+            "Interpretation: a BLASTP match indicates homology to a sequence in the uploaded reference set. "
+            "It does not independently establish binding specificity or host range. Confirm candidates with "
+            "the reference study, receptor assays and appropriate experimental validation."
+        )
+    st.markdown(
+        "[Original PhARIS repository](https://github.com/JKrusche1/PhARIS) · "
+        "[PhARIS study](https://doi.org/10.1016/j.celrep.2025.115369)"
+    )
 
 
 
