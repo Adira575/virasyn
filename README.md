@@ -25,7 +25,7 @@ VIRASYN retrieves results from upstream providers and links to the source record
 
 ## PCR / qPCR analysis
 
-VIRASYN includes a qPCR workbench for CSV, TSV, TXT, XLSX and XLSM well-level exports containing instrument-reported Cq/Ct values. Users map sample, target, Cq/Ct, condition and optional sample-role columns.
+VIRASYN includes a qPCR workbench for RDML, CSV, TSV, TXT, XLSX and XLSM exports containing instrument-reported Cq/Ct values. RDML XML (including zipped RDML packages) can also provide amplification and melt-curve traces for visualization. Users map sample, target, Cq/Ct, condition and optional sample-role columns.
 
 Features include:
 - Technical-well aggregation within biological sample × condition × target.
@@ -38,7 +38,7 @@ Features include:
 - Group fold changes versus a selected calibrator and Welch tests on per-biological-sample log2 normalized quantities, with Benjamini–Hochberg q-values.
 - Downloadable Excel workbook and CSV outputs.
 
-The module starts from Cq/Ct values already called by the instrument software. It does not yet calculate Cq from raw cycle-by-cycle fluorescence traces or decode proprietary binary instrument projects. The 100% efficiency values shown when no standard curve is supplied are explicit assumptions, not measured assay performance. Review reference-gene stability, efficiency, controls and replicate flags before interpreting results. This is a research workflow, not a diagnostic test.
+The module starts from Cq/Ct values already called by the instrument software. RDML amplification and melt-curve traces can be displayed, but the app does not yet recalculate Cq from raw cycle-by-cycle fluorescence traces or decode proprietary binary instrument projects. The 100% efficiency values shown when no standard curve is supplied are explicit assumptions, not measured assay performance. Review reference-gene stability, efficiency, controls and replicate flags before interpreting results. This is a research workflow, not a diagnostic test.
 
 Methods are informed by the MIQE 2.0 recommendations for transparent qPCR data processing, efficiency-aware quantification, normalization and quality control: https://doi.org/10.1093/clinchem/hvaf043
 
