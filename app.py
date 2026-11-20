@@ -50,9 +50,9 @@ div[data-testid="stMetric"] {background:rgba(120,150,170,.08); border:1px solid 
 
 st.caption("An integrated viral research discovery and analysis workspace.")
 
-database_tab, analysis_tab, qpcr_tab, resources_tab, about_tab = st.tabs(
+database_tab, analysis_tab, qpcr_tab, workbench_tab, resources_tab, about_tab = st.tabs(
     ["🔎 Research database", "🧬 Sequence & structure analysis", "🧪 PCR / qPCR analysis",
-     "📚 Database directory", "ℹ️ About VIRASYN"]
+     "🧰 Bioinformatics workbench", "📚 Database directory", "ℹ️ About VIRASYN"]
 )
 
 def render_record(record: dict, kind: str):
@@ -656,6 +656,97 @@ with qpcr_tab:
         )
 
 
+with workbench_tab:
+    st.subheader("VIRASYN Bioinformatics Workbench")
+    st.write(
+        "A consolidated catalogue of research workflows spanning sequence, genome, transcriptome, "
+        "protein, structure, docking, comparative genomics and virology. The status column distinguishes "
+        "functions available in the current release from partial integrations and planned development."
+    )
+
+    module_catalogue = pd.DataFrame([
+        {
+            "Module": "Genome analysis",
+            "Capabilities": "FASTA import, sequence summaries, GC content, six-frame ORF screening and downloadable ORFs. FASTQ quality control, FastQC integration and automated genome annotation are planned.",
+            "Current status": "Partial",
+        },
+        {
+            "Module": "Sequence analysis",
+            "Capabilities": "BLASTP against user-provided protein references and federated sequence-database discovery. Multiple sequence alignment and phylogenetic analysis are planned.",
+            "Current status": "Partial",
+        },
+        {
+            "Module": "Protein analysis",
+            "Capabilities": "Protein physicochemical properties and optional HMMER profile scanning with user-provided HMM libraries. Automated motif/domain annotation and richer functional annotation are planned.",
+            "Current status": "Partial",
+        },
+        {
+            "Module": "Structural bioinformatics",
+            "Capabilities": "PDB/mmCIF metadata parsing and PDB 3D visualization. Structural alignment, TM-align integration and RMSD comparison are planned.",
+            "Current status": "Partial",
+        },
+        {
+            "Module": "Molecular docking",
+            "Capabilities": "Protein and ligand preparation, docking workflows, pose scoring and protein–ligand interaction analysis.",
+            "Current status": "Planned",
+        },
+        {
+            "Module": "Transcriptomics",
+            "Capabilities": "RNA-seq quality control, differential expression, PCA, volcano plots and heatmaps.",
+            "Current status": "Planned",
+        },
+        {
+            "Module": "Comparative genomics",
+            "Capabilities": "Genome-to-genome comparison, gene conservation, orthology and synteny analysis, with automated annotation links.",
+            "Current status": "Planned",
+        },
+        {
+            "Module": "Virology",
+            "Capabilities": "Viral literature, genome, protein and taxonomy discovery plus preliminary sequence characterization. Validated candidate attachment-protein workflows and virus–host evidence integration remain planned.",
+            "Current status": "Partial",
+        },
+        {
+            "Module": "Data visualization",
+            "Capabilities": "Analysis tables, qPCR fold-change charts and interactive PDB viewing. Publication-ready figure templates, PCA plots, volcano plots and heatmaps are planned.",
+            "Current status": "Partial",
+        },
+        {
+            "Module": "PCR / qPCR analysis",
+            "Capabilities": "RDML and tabular Cq/Ct import, technical-replicate QC, standard curves, efficiency-aware relative expression, NTC flags and Excel/CSV reports.",
+            "Current status": "Available",
+        },
+    ])
+    st.dataframe(
+        module_catalogue,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Module": st.column_config.TextColumn("Module", width="medium"),
+            "Capabilities": st.column_config.TextColumn("Capabilities", width="large"),
+            "Current status": st.column_config.TextColumn("Current status", width="small"),
+        },
+    )
+    st.caption(
+        "Available = implemented in the current release. Partial = some component is available, "
+        "but the full workflow is not yet implemented. Planned = not currently available in VIRASYN."
+    )
+
+    st.divider()
+    st.subheader("Next five development priorities")
+    st.markdown("""
+1. **RNA-seq analysis** — FastQC, differential expression, PCA, volcano plots and heatmaps.
+2. **Multiple sequence alignment and phylogenetics** — aligned sequence workflows, model selection and evolutionary trees.
+3. **Protein structure comparison** — structural superposition, TM-align and RMSD reporting.
+4. **Molecular docking** — protein/ligand preparation, docking workflows and protein–ligand interaction analysis.
+5. **Comparative genomics and automated genome annotation** — genome comparison, gene conservation, orthology and synteny.
+""")
+    st.info(
+        "These five items are the planned development sequence, not features that are already active. "
+        "New workflows will be added with reproducible parameters, inspectable intermediate results, "
+        "clear software provenance and downloadable outputs."
+    )
+
+
 with resources_tab:
     st.subheader("A wider directory of public virology and molecular-biology resources")
     st.write(
@@ -903,7 +994,7 @@ VIRASYN is not yet a universal virus-host prediction system. Bacteriophage RBPs,
     st.subheader("Development roadmap")
     st.markdown("""
 The next major development goal is to move VIRASYN towards a comprehensive viral research
-knowledgebase through four planned capabilities:
+knowledgebase through these planned capabilities:
 
 - **Individual virus profile pages** that bring taxonomy, genome, protein, host and literature evidence together.
 - **Saved research collections** for organizing records, searches and analysis outputs.
@@ -911,7 +1002,16 @@ knowledgebase through four planned capabilities:
 - **Scientifically validated virus–host prediction models** developed for appropriate virus groups and evaluated
   against independent, well-curated evidence.
 
-These are planned development areas, not capabilities of the current release. Virus–host prediction
+**Next five bioinformatics workbench priorities**
+
+1. RNA-seq analysis — FastQC, differential expression, PCA, volcano plots and heatmaps.
+2. Multiple sequence alignment and phylogenetics.
+3. Protein structure comparison using TM-align and RMSD.
+4. Molecular docking and protein–ligand interaction analysis.
+5. Comparative genomics and automated genome annotation.
+
+These are planned development areas, not capabilities of the current release. Each new analysis
+workflow will need suitable reference data, reproducible methods and validation. Virus–host prediction
 will require virus-group-appropriate datasets and independent validation rather than assuming one
 universal model can cover bacteriophages, animal viruses and plant viruses.
 """)
