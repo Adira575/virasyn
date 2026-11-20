@@ -105,6 +105,12 @@ Not yet implemented:
 - Phylogenetic and comparative-genomic visualization.
 - Calibrated host-range prediction for unseen phages.
 
+## RBP–receptor baseline included in this branch
+
+The app now contains an optional train-on-your-data Random Forest baseline. It derives amino-acid composition for each partner, sequence lengths, normalized global-alignment score and aligned identity. It uses a group-held-out split based on the user-provided `split_group`, and reports ROC-AUC, average precision, balanced accuracy, precision, recall, F1 and a confusion matrix.
+
+The application intentionally ships no pretrained weights. It requires experimentally supported binding positives and experimentally tested non-binding negatives. Unknown pairs are not valid negative labels. The holdout metrics are preliminary internal evaluation only; they are not external validation, calibration or proof that the model generalizes to unseen receptor families. The feature set is a baseline for benchmarking, not a novel biological mechanism model.
+
 ## Model-development plan
 
 1. Curate a non-redundant RBP sequence set with experimentally supported labels and explicit negative/unknown labels.
