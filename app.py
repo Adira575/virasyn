@@ -573,6 +573,8 @@ with qpcr_tab:
                         st.error(f"qPCR analysis could not be completed: {analysis_error}")
             except Exception as import_error:
                 st.error(f"Could not read or map this qPCR export: {import_error}")
+        except Exception as file_error:
+            st.error(f"Could not load qPCR file: {file_error}")
     else:
         st.markdown(
             """
