@@ -34,6 +34,30 @@ This workflow is a homology screen, not a validated binding-specificity predicto
 Original project: https://github.com/JKrusche1/PhARIS  
 Publication: https://doi.org/10.1016/j.celrep.2025.115369
 
+## Bacteria-focused Phage Intelligence
+
+The Phage Intelligence workspace combines the existing reference-driven RBP discovery workflow with an evidence integration layer for bacterial host and receptor hypotheses.
+
+### Current implemented capabilities
+- Six-frame ORF screening from one or multiple bacteriophage nucleotide records.
+- Local BLASTP comparison against a researcher-supplied, permission-cleared RBP protein reference FASTA.
+- Configurable minimum ORF length, sequence identity, query coverage and translation table.
+- Optional RBP metadata joined by exact FASTA subject identifier.
+- Optional bacterial host evidence CSV with explicit evidence levels (experimental, curated, computational, inferred) and evidence types (productive infection, host range, adsorption, receptor binding, CRISPR spacer, sequence similarity).
+- Transparent evidence-weighted host ranking; the index is not a probability and is not a trained predictor.
+- Optional RBP-to-receptor annotation mapping by exact reference identifier.
+- Optional PDB/mmCIF structure inventory and integrated JSON/CSV exports.
+- Downloadable CSV templates for host evidence and receptor annotations.
+
+### Required CSV schemas
+
+Host evidence requires: `phage_id, host_taxid, host_name, evidence_type, evidence_level, source, citation`.
+
+RBP–receptor annotations require: `subject_id, receptor, receptor_class, host_taxid, host_name, evidence_type, citation`. The `subject_id` must exactly match the protein identifier in the RBP reference FASTA.
+
+### Scientific boundary
+This is an evidence-integration and homology-screening release, not a universal RBP–receptor interaction model. The current host ranking summarizes supplied records; it does not infer unseen hosts from sequence alone. Structural file intake is an inventory step, not docking or a binding-energy calculation. Future work must add curated training labels, independent taxonomic holdouts, calibrated evaluation, structural interface methods and experimental validation before claiming generalized receptor specificity.
+
 ## AlphaFold protein structure lookup
 
 The AlphaFold tab retrieves published predictions from the AlphaFold Protein Structure Database by UniProt accession. It displays available model metadata and the global confidence metric (pLDDT where supplied), supports PDB and mmCIF coordinate downloads, and renders PDB coordinates in the built-in 3D viewer. The app links to the official AlphaFold Server for submitting new sequence-prediction jobs; VIRASYN does not run AlphaFold inference itself. A predicted structure and its confidence scores are not experimental validation.
@@ -100,7 +124,7 @@ assumed to cover bacteriophages, animal viruses and plant viruses.
 
 ## Navigation
 
-The main workspace is organized into eight sections: Research database, Sequence & structure analysis, PCR / qPCR analysis, Bioinformatics workbench, AlphaFold, PhARIS RBP intelligence, Database directory and About VIRASYN.
+The main workspace is organized into nine sections: Research database, Sequence & structure analysis, PCR / qPCR analysis, Bioinformatics workbench, AlphaFold, PhARIS RBP intelligence, Phage Intelligence, Database directory and About VIRASYN.
 
 ## Sequence and structure analysis
 
