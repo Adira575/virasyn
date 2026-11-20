@@ -1065,6 +1065,7 @@ VIRASYN brings literature discovery and molecular data retrieval together with s
 - European Nucleotide Archive (ENA).
 - RCSB Protein Data Bank.
 - UniProtKB and InterPro.
+- AlphaFold Protein Structure Database — published protein structure predictions, confidence metadata and coordinate downloads.
 
 VIRASYN retrieves records from upstream APIs when you search. It does not own, replace or mirror those databases. The Database Directory also links to specialist portals that are not yet directly queried by the app.
 """)
