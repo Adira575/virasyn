@@ -405,7 +405,10 @@ with qpcr_tab:
                         sc_columns = list(qpcr_standard_raw.columns)
                         sc_target = st.selectbox(
                             "Standard curve target column", sc_columns,
-                            index=_qpcr_index(detect_column(sc_columns, ("target", "gene", "assay"))),
+                            index=(
+                                sc_columns.index(detect_column(sc_columns, ("target", "gene", "assay")))
+                                if detect_column(sc_columns, ("target", "gene", "assay")) in sc_columns else 0
+                            ),
                             key="qpcr_sc_target",
                         )
                         sc_cq = st.selectbox(
