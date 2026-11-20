@@ -1,4 +1,7 @@
 [server]
+# Avoid Streamlit's hot-reload module race on Community Cloud.
+# GitHub deployments restart the app with the new code.
+fileWatcherType = "none"
 headless = true
 maxUploadSize = 100
 
