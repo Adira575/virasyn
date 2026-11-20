@@ -481,6 +481,21 @@ VIRASYN retrieves records from upstream APIs when you search. It does not own, r
     st.markdown("""
 VIRASYN is not yet a universal virus-host prediction system. Bacteriophage RBPs, animal-virus attachment/entry proteins and plant-virus host interactions require separate training data and methods. Sequence similarity, attachment, receptor binding, host range and productive infection are distinct levels of evidence.
 """)
+    st.subheader("Development roadmap")
+    st.markdown("""
+The next major development goal is to move VIRASYN towards a comprehensive viral research
+knowledgebase through four planned capabilities:
+
+- **Individual virus profile pages** that bring taxonomy, genome, protein, host and literature evidence together.
+- **Saved research collections** for organizing records, searches and analysis outputs.
+- **Automated genome annotation** with transparent methods, provenance and reviewable outputs.
+- **Scientifically validated virus–host prediction models** developed for appropriate virus groups and evaluated
+  against independent, well-curated evidence.
+
+These are planned development areas, not capabilities of the current release. Virus–host prediction
+will require virus-group-appropriate datasets and independent validation rather than assuming one
+universal model can cover bacteriophages, animal viruses and plant viruses.
+""")
     st.subheader("VIRASYN AI helper")
     st.markdown("""
 The floating assistant provides help with site navigation, search strategy and interpretation of computational outputs.
