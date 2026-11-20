@@ -23,6 +23,25 @@ The Database Directory also links to specialist resources including ICTV taxonom
 
 VIRASYN retrieves results from upstream providers and links to the source records. It does not mirror or replace those databases. Data coverage, licensing, citation requirements and query syntax differ by provider.
 
+## PCR / qPCR analysis
+
+VIRASYN includes a qPCR workbench for CSV, TSV, TXT, XLSX and XLSM well-level exports containing instrument-reported Cq/Ct values. Users map sample, target, Cq/Ct, condition and optional sample-role columns.
+
+Features include:
+- Technical-well aggregation within biological sample × condition × target.
+- Missing/undetermined Cq values are retained as missing, never converted to zero.
+- NTC identification and positive-NTC warnings.
+- Technical replicate mean, SD, range and review flags (no automatic outlier deletion).
+- Optional standard-curve fitting by assay using Cq versus log10 concentration, with slope, R² and estimated amplification efficiency.
+- Editable per-assay efficiency values when validated efficiency data are available.
+- Efficiency-corrected relative quantities, normalized to the geometric mean of selected reference-gene quantities.
+- Group fold changes versus a selected calibrator and Welch tests on per-biological-sample log2 normalized quantities, with Benjamini–Hochberg q-values.
+- Downloadable Excel workbook and CSV outputs.
+
+The module starts from Cq/Ct values already called by the instrument software. It does not yet calculate Cq from raw cycle-by-cycle fluorescence traces or decode proprietary binary instrument projects. The 100% efficiency values shown when no standard curve is supplied are explicit assumptions, not measured assay performance. Review reference-gene stability, efficiency, controls and replicate flags before interpreting results. This is a research workflow, not a diagnostic test.
+
+Methods are informed by the MIQE 2.0 recommendations for transparent qPCR data processing, efficiency-aware quantification, normalization and quality control: https://doi.org/10.1093/clinchem/hvaf043
+
 ## Development roadmap
 
 The next major development goal is to move VIRASYN towards a comprehensive viral research
@@ -37,7 +56,7 @@ These are planned development areas, not current-release features. Virus–host 
 virus-group-appropriate datasets and independent validation; a single universal model should not be
 assumed to cover bacteriophages, animal viruses and plant viruses.
 
-## Analysis features
+## Sequence and structure analysis
 
 - Multi-file nucleotide/protein FASTA upload.
 - Six-frame preliminary ORF screening with selectable NCBI genetic code.
@@ -70,6 +89,9 @@ Open http://localhost:8501.
 The application is configured for Streamlit Community Cloud. Select repository `Adira575/virasyn`, branch `main`, main file `app.py`. No AI API key is required. Optional NCBI API credentials and a contact email can be configured as server-side secrets.
 
 ## Scientific limitations
+
+qPCR outputs are dependent on assay efficiency, validated reference genes, sample design, negative controls and instrument Cq calling. Technical replicates must not be counted as independent biological samples. The qPCR module flags high technical replicate spread and detected NTC wells but does not automatically exclude data or establish assay validity.
+
 
 VIRASYN is not a validated universal virus-host predictor. Six-frame ORF screening is not a complete virus-specific gene caller and does not model all eukaryotic splicing, RNA editing, transcript processing or polyprotein strategies. Similarity does not prove function. Attachment, receptor binding, host range and productive infection are distinct biological endpoints. Each virus group requires suitable reference data and independent validation.
 
