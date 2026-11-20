@@ -249,8 +249,8 @@ def analyse_relative_expression(
     technical["Cq_range"] = technical["max_Cq"] - technical["min_Cq"]
     technical["technical_qc"] = np.select(
         [
-            technical["n_technical_wells"].eq(0),
-            technical["sd_Cq"].gt(max_technical_sd),
+            technical["n_technical_wells"].eq(0).fillna(False).to_numpy(dtype=bool),
+            technical["sd_Cq"].gt(max_technical_sd).fillna(False).to_numpy(dtype=bool),
         ],
         ["No detected wells", f"Review: technical SD > {max_technical_sd:g} Cq"],
         default="OK / no automatic exclusion",
