@@ -1,4 +1,6 @@
 import numpy as np
+from io import BytesIO
+import zipfile
 import pandas as pd
 import pytest
 
@@ -110,3 +112,65 @@ def test_single_technical_well_is_flagged_as_unreplicated():
     )
     gene_qc = result["technical_qc"].query("target == 'GeneA'").iloc[0]
     assert "Single detected well" in gene_qc["technical_qc"]
+
+
+RDML_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
+<rdml version="1.3">
+  <sample id="S1">
+    <name>Control_1</name>
+    <description>Control</description>
+    <type>unkn</type>
+  </sample>
+  <sample id="N1">
+    <name>NTC_1</name>
+    <type>ntc</type>
+  </sample>
+  <target id="T1"><name>ACTB</name></target>
+  <experiment id="Experiment1">
+    <run id="Run1">
+      <react id="A1">
+        <sample id="S1"/>
+        <data>
+          <tar id="T1"/>
+          <cq>20.5</cq>
+          <adp><fpoints>
+            <point><cyc>1</cyc><fluor>0.10</fluor></point>
+            <point><cyc>2</cyc><fluor>0.14</fluor></point>
+          </fpoints></adp>
+          <mdp><fpoints>
+            <point><tmp>70.0</tmp><fluor>0.20</fluor></point>
+            <point><tmp>71.0</tmp><fluor>0.15</fluor></point>
+          </fpoints></mdp>
+        </data>
+      </react>
+      <react id="A2">
+        <sample id="N1"/>
+        <data><tar id="T1"/><cq>-1</cq></data>
+      </react>
+    </run>
+  </experiment>
+</rdml>
+"""
+
+
+def test_rdml_xml_maps_samples_targets_cq_and_curves():
+    frame = read_qpcr_table(RDML_XML, "run.rdml")
+    control = frame[frame["Sample ID"].eq("S1")].iloc[0]
+    ntc = frame[frame["Sample ID"].eq("N1")].iloc[0]
+    assert control["Sample"] == "Control_1"
+    assert control["Sample description"] == "Control"
+    assert control["Target"] == "ACTB"
+    assert control["Cq"] == "20.5"
+    assert len(pd.read_json(control["Amplification trace (JSON)"])) == 2
+    assert len(pd.read_json(control["Melt curve trace (JSON)"])) == 2
+    assert ntc["Cq"] == "Undetermined"
+    assert ntc["Sample role"] == "NTC"
+
+
+def test_rdml_zip_package_is_supported():
+    archive_bytes = BytesIO()
+    with zipfile.ZipFile(archive_bytes, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("rdml_data.xml", RDML_XML)
+    frame = read_qpcr_table(archive_bytes.getvalue(), "instrument_run.rdml")
+    assert len(frame) == 2
+    assert set(frame["Target"]) == {"ACTB"}
