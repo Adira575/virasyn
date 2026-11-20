@@ -23,6 +23,10 @@ The Database Directory also links to specialist resources including ICTV taxonom
 
 VIRASYN retrieves results from upstream providers and links to the source records. It does not mirror or replace those databases. Data coverage, licensing, citation requirements and query syntax differ by provider.
 
+## AlphaFold protein structure lookup
+
+The AlphaFold tab retrieves published predictions from the AlphaFold Protein Structure Database by UniProt accession. It displays available model metadata and the global confidence metric (pLDDT where supplied), supports PDB and mmCIF coordinate downloads, and renders PDB coordinates in the built-in 3D viewer. The app links to the official AlphaFold Server for submitting new sequence-prediction jobs; VIRASYN does not run AlphaFold inference itself. A predicted structure and its confidence scores are not experimental validation.
+
 ## PCR / qPCR analysis
 
 VIRASYN includes a qPCR workbench for RDML, CSV, TSV, TXT, XLSX and XLSM exports containing instrument-reported Cq/Ct values. RDML XML (including zipped RDML packages) can also provide amplification and melt-curve traces for visualization. Users map sample, target, Cq/Ct, condition and optional sample-role columns.
@@ -82,6 +86,10 @@ knowledgebase through four planned capabilities:
 These are planned development areas, not current-release features. Virus–host prediction will require
 virus-group-appropriate datasets and independent validation; a single universal model should not be
 assumed to cover bacteriophages, animal viruses and plant viruses.
+
+## Navigation
+
+The main workspace is organized into seven sections: Research database, Sequence & structure analysis, PCR / qPCR analysis, Bioinformatics workbench, AlphaFold, Database directory and About VIRASYN.
 
 ## Sequence and structure analysis
 
