@@ -420,10 +420,10 @@ with qpcr_tab:
                         sc_concentration = st.selectbox(
                             "Known standard concentration column", sc_columns,
                             index=sc_columns.index(detect_column(sc_columns, (
-                                "concentration", "copies", "quantity", "dilution"
+                                "concentration", "copies", "quantity"
                             )))
                             if detect_column(sc_columns, (
-                                "concentration", "copies", "quantity", "dilution"
+                                "concentration", "copies", "quantity"
                             )) in sc_columns else 0,
                             key="qpcr_sc_concentration",
                         )
@@ -515,6 +515,12 @@ with qpcr_tab:
                             )
                         if not technical_qc.empty and technical_qc["technical_qc"].str.startswith("Review").any():
                             st.warning("Some technical replicate groups exceed the selected SD threshold. They are flagged, not automatically excluded.")
+                        partial_ref_rows = sample_level["normalization_status"].str.startswith("Partial reference set").sum()
+                        if partial_ref_rows:
+                            st.warning(
+                                f"{partial_ref_rows} sample-target rows used fewer than all selected reference genes. "
+                                "Review the reference-gene detection table before interpreting these samples."
+                            )
                         if ntc_detected:
                             st.error("One or more NTC wells have a Cq value. Investigate possible contamination before interpreting results.")
                         elif int(ntc_qc.iloc[0]["NTC_wells"]) == 0:
