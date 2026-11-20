@@ -288,10 +288,22 @@ def analyse_relative_expression(
     sample_level["log2_normalized_quantity"] = np.log2(
         sample_level["normalized_quantity"].where(sample_level["normalized_quantity"] > 0)
     )
-    sample_level["normalization_status"] = np.where(
-        sample_level["reference_quantity"].notna(),
-        "Normalized",
-        "Not normalized: no detected reference-gene Cq",
+    sample_level["normalization_status"] = "Normalized"
+    sample_level.loc[
+        sample_level["reference_quantity"].isna(),
+        "normalization_status",
+    ] = "Not normalized: no detected reference-gene Cq"
+    partial_reference = (
+        sample_level["reference_quantity"].notna()
+        & sample_level["reference_genes_detected"].lt(len(reference_genes)).fillna(False)
+    )
+    sample_level.loc[
+        partial_reference,
+        "normalization_status",
+    ] = (
+        "Partial reference set: "
+        + sample_level.loc[partial_reference, "reference_genes_detected"].astype(str)
+        + f"/{len(reference_genes)} detected"
     )
 
     valid = sample_level.dropna(subset=["normalized_quantity"]).copy()
