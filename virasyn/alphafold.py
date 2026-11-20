@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import requests
 
-API_BASE = "https://alphafold.ebi.ac.uk/api/prediction"
+API_BASE = "https://alphafold.com/api/prediction"
 TIMEOUT = 30
 ACCESSION_RE = re.compile(r"^[A-Z0-9]{6,10}$")
 
@@ -39,7 +39,7 @@ def _safe_structure_url(model: dict, coordinate_format: str) -> str:
     url = model.get(key)
     parsed = urlparse(url or "")
     if parsed.scheme != "https" or parsed.hostname not in {
-        "alphafold.ebi.ac.uk", "ftp.ebi.ac.uk"
+        "alphafold.com", "alphafold.ebi.ac.uk", "ftp.ebi.ac.uk"
     }:
         raise ValueError(f"The AlphaFold record does not contain a trusted {coordinate_format.upper()} download URL.")
     return url
