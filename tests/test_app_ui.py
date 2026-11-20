@@ -4,37 +4,53 @@ from streamlit.testing.v1 import AppTest
 
 
 APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
+TAB_LABELS = [
+    "🔎 Research database",
+    "🧬 Sequence & structure analysis",
+    "🧪 PCR / qPCR analysis",
+    "🧰 Bioinformatics workbench",
+    "📚 Database directory",
+    "ℹ️ About VIRASYN",
+]
 
 
-def test_sequence_analysis_workspace_renders_by_default():
+def test_all_six_horizontal_workspaces_render():
     app = AppTest.from_file(APP_PATH, default_timeout=60).run()
 
     assert not app.exception, "\\n".join(
         str(exception.message) for exception in app.exception
     )
 
-    selected = [
-        element.value
-        for element in app.selectbox
-        if getattr(element, "key", None) == "virasyn_workspace_section"
-    ]
-    assert selected == ["🧬 Sequence & structure analysis"]
+    source = APP_PATH.read_text(encoding="utf-8")
+    tabs_start = source.index("database_tab, analysis_tab, qpcr_tab, workbench_tab, resources_tab, about_tab = st.tabs(")
+    tabs_end = source.index("\n)", tabs_start)
+    tabs_declaration = source[tabs_start:tabs_end]
+    positions = [tabs_declaration.index(label) for label in TAB_LABELS]
+    assert positions == sorted(positions)
 
     visible_subheaders = [element.value for element in app.subheader]
-    assert "Sequence & structure analysis" in visible_subheaders
-    assert "Upload genomes, proteins and structures" in visible_subheaders
+    expected_headings = [
+        "Search viral research literature and molecular data",
+        "Sequence & structure analysis",
+        "Real-time PCR (qPCR / RT-qPCR) analysis",
+        "VIRASYN Bioinformatics Workbench",
+        "A wider directory of public virology and molecular-biology resources",
+        "A unified discovery and analysis workspace for virology",
+    ]
+    for heading in expected_headings:
+        assert heading in visible_subheaders
 
-    visible_captions = [element.value for element in app.caption]
-    assert any("virasyn-workspace-ui-2026-11-20-r1" in value for value in visible_captions)
+    assert any("virasyn-workspace-ui-2026-11-20-r2" in item.value for item in app.caption)
 
 
-def test_workspace_selector_switches_sections():
+def test_sequence_analysis_upload_controls_are_rendered():
     app = AppTest.from_file(APP_PATH, default_timeout=60).run()
 
-    app.selectbox(key="virasyn_workspace_section").set_value(
-        "🧰 Bioinformatics workbench"
-    ).run()
+    assert not app.exception, "\\n".join(
+        str(exception.message) for exception in app.exception
+    )
 
-    visible_subheaders = [element.value for element in app.subheader]
-    assert "VIRASYN Bioinformatics Workbench" in visible_subheaders
-    assert "Upload genomes, proteins and structures" not in visible_subheaders
+    labels = [element.label for element in app.file_uploader]
+    assert "Genome/protein FASTA and PDB/mmCIF structures" in labels
+    assert "Optional BLASTP reference proteins (FASTA)" in labels
+    assert "Optional HMMER profile library (.hmm)" in labels
