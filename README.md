@@ -42,6 +42,33 @@ The module starts from Cq/Ct values already called by the instrument software. R
 
 Methods are informed by the MIQE 2.0 recommendations for transparent qPCR data processing, efficiency-aware quantification, normalization and quality control: https://doi.org/10.1093/clinchem/hvaf043
 
+## Bioinformatics workbench
+
+The Bioinformatics Workbench page in the app presents this module catalogue. Status labels describe the current implementation rather than the long-term ambition.
+
+| Module | Capabilities | Current status |
+|---|---|---|
+| Genome analysis | FASTA import, sequence summaries, GC content, six-frame ORF screening and downloadable ORFs. FASTQ QC, FastQC and automated genome annotation are planned. | Partial |
+| Sequence analysis | BLASTP against user-provided protein references and federated sequence-database discovery. Multiple sequence alignment and phylogenetics are planned. | Partial |
+| Protein analysis | Physicochemical properties and optional HMMER profile scanning. Automated motif/domain and richer functional annotation are planned. | Partial |
+| Structural bioinformatics | PDB/mmCIF metadata parsing and PDB 3D visualization. Structural alignment, TM-align and RMSD comparison are planned. | Partial |
+| Molecular docking | Protein/ligand preparation, docking, pose scoring and interaction analysis. | Planned |
+| Transcriptomics | RNA-seq quality control, differential expression, PCA, volcano plots and heatmaps. | Planned |
+| Comparative genomics | Genome comparison, gene conservation, orthology and synteny analysis. | Planned |
+| Virology | Viral literature, genome, protein and taxonomy discovery plus preliminary sequence characterization. Validated attachment-protein workflows and virus–host evidence integration are planned. | Partial |
+| Data visualization | Analysis tables, qPCR charts and PDB viewing. Publication-ready plots, PCA, volcano plots and heatmaps are planned. | Partial |
+| PCR / qPCR analysis | RDML and tabular Cq/Ct import, technical-replicate QC, standard curves, efficiency-aware relative expression, NTC flags and Excel/CSV reports. | Available |
+
+### Next five development priorities
+
+1. **RNA-seq analysis** — FastQC, differential expression, PCA, volcano plots and heatmaps.
+2. **Multiple sequence alignment and phylogenetics.**
+3. **Protein structure comparison** — TM-align and RMSD.
+4. **Molecular docking** — protein/ligand preparation, docking workflows and protein–ligand interaction analysis.
+5. **Comparative genomics and automated genome annotation.**
+
+These are planned additions, not active features. Each workflow will need reproducible parameters, inspectable intermediate results, clear software provenance and appropriate validation.
+
 ## Development roadmap
 
 The next major development goal is to move VIRASYN towards a comprehensive viral research
