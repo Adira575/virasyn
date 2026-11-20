@@ -77,6 +77,8 @@ def normalise_qpcr_wells(
         raise ValueError(f"Sample-role column not found: {role_col}")
 
     result = pd.DataFrame({
+        "source_row": np.arange(2, len(frame) + 2),
+        "raw_Cq": frame[cq_col].astype("string"),
         "sample_id": frame[sample_col].astype("string").str.strip(),
         "target": frame[target_col].astype("string").str.strip(),
         "Cq": _numeric_cq(frame[cq_col]),
@@ -250,9 +252,14 @@ def analyse_relative_expression(
     technical["technical_qc"] = np.select(
         [
             technical["n_technical_wells"].eq(0).fillna(False).to_numpy(dtype=bool),
+            technical["n_technical_wells"].eq(1).fillna(False).to_numpy(dtype=bool),
             technical["sd_Cq"].gt(max_technical_sd).fillna(False).to_numpy(dtype=bool),
         ],
-        ["No detected wells", f"Review: technical SD > {max_technical_sd:g} Cq"],
+        [
+            "No detected wells",
+            "Single detected well; technical variation cannot be estimated",
+            f"Review: technical SD > {max_technical_sd:g} Cq",
+        ],
         default="OK / no automatic exclusion",
     )
 
