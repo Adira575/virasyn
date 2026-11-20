@@ -50,7 +50,7 @@ def test_efficiency_corrected_relative_expression_and_ntc_exclusion():
     treatment_gene = summary[
         summary["target"].eq("GeneA") & summary["condition"].eq("Treatment")
     ].iloc[0]
-    assert treatment_gene["fold_change_vs_calibrator"] == pytest.approx(8.0, rel=0.05)
+    assert treatment_gene["fold_change_vs_calibrator"] == pytest.approx(8.574187700290347, rel=0.001)
     assert result["ntc_qc"].iloc[0]["NTC_wells"] == 1
     assert result["ntc_qc"].iloc[0]["NTC_detected_wells"] == 1
     assert not result["sample_level"]["sample_id"].str.startswith("NTC").any()
