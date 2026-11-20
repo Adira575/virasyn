@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "virasyn"
 version = "0.4.0"
-description = "Viral research discovery and analysis platform with AI helper"
+description = "Viral research discovery and analysis platform"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -14,8 +14,6 @@ dependencies = [
   "pandas>=2.2,<4",
   "py3Dmol>=2.5,<3",
   "requests>=2.31,<3",
-  "streamlit-float>=0.4,<0.5",
-  "openai>=2.0,<3",
 ]
 
 [project.optional-dependencies]
