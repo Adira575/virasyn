@@ -53,7 +53,7 @@ database_tab, analysis_tab, resources_tab, about_tab = st.tabs(
 def render_record(record: dict, kind: str):
     with st.container(border=True):
         title = record.get("title") or record.get("accession") or record.get("id") or "Untitled record"
-        st.markdown(f'<div class="record-title">{title}</div>', unsafe_allow_html=True)
+        st.write(title)
         meta = []
         for key in ("authors", "journal", "date", "organism", "length", "method", "doi",
                     "rank", "lineage", "description", "type", "cited_by_count", "is_open_access"):
