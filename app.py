@@ -12,9 +12,12 @@ from virasyn.core import (
     sequence_summary,
 )
 from virasyn.database import (
-    fetch_sequence_fasta, search_all_sources, search_ncbi_sequences,
-    search_pubmed, search_rcsb, search_uniprot,
+    fetch_sequence_fasta, search_all_sources, search_crossref, search_ena,
+    search_europe_pmc, search_interpro, search_ncbi_sequences,
+    search_ncbi_taxonomy, search_openalex, search_pubmed, search_rcsb,
+    search_uniprot,
 )
+from virasyn.assistant import render_floating_assistant
 
 st.set_page_config(
     page_title="VIRASYN | Viral Systems Intelligence",
@@ -41,9 +44,10 @@ div[data-testid="stMetric"] {background:rgba(120,150,170,.08); border:1px solid 
 """, unsafe_allow_html=True)
 
 st.caption("An integrated viral research discovery and analysis workspace.")
+render_floating_assistant()
 
-database_tab, analysis_tab, about_tab = st.tabs(
-    ["🔎 Research database", "🧬 Sequence & structure analysis", "ℹ️ About VIRASYN"]
+database_tab, analysis_tab, resources_tab, about_tab = st.tabs(
+    ["🔎 Research database", "🧬 Sequence & structure analysis", "📚 Database directory", "ℹ️ About VIRASYN"]
 )
 
 def render_record(record: dict, kind: str):
@@ -51,7 +55,8 @@ def render_record(record: dict, kind: str):
         title = record.get("title") or record.get("accession") or record.get("id") or "Untitled record"
         st.markdown(f'<div class="record-title">{title}</div>', unsafe_allow_html=True)
         meta = []
-        for key in ("authors", "journal", "date", "organism", "length", "method", "doi"):
+        for key in ("authors", "journal", "date", "organism", "length", "method", "doi",
+                    "rank", "lineage", "description", "type", "cited_by_count", "is_open_access"):
             value = record.get(key)
             if value:
                 meta.append(f"**{key.replace('_', ' ').title()}:** {value}")
@@ -91,8 +96,10 @@ with database_tab:
         )
         source = st.selectbox(
             "Search database",
-            ["All sources", "PubMed articles", "NCBI nucleotide genomes", "NCBI protein sequences",
-             "RCSB PDB structures", "UniProtKB proteins"],
+            ["All sources", "PubMed articles", "Europe PMC articles", "OpenAlex scholarly works",
+             "Crossref records", "NCBI nucleotide genomes", "NCBI protein sequences",
+             "NCBI taxonomy", "ENA nucleotide sequences", "RCSB PDB structures",
+             "UniProtKB proteins", "InterPro entries"],
         )
         c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
         with c1:
@@ -123,6 +130,21 @@ with database_tab:
                         st.session_state["virasyn_search_result"] = result
                         st.session_state["virasyn_search_source"] = source
                         st.session_state["virasyn_search_query"] = query.strip()
+                    elif source == "Europe PMC articles":
+                        result = search_europe_pmc(query.strip(), page_number, page_size)
+                        st.session_state["virasyn_search_result"] = result
+                        st.session_state["virasyn_search_source"] = source
+                        st.session_state["virasyn_search_query"] = query.strip()
+                    elif source == "OpenAlex scholarly works":
+                        result = search_openalex(query.strip(), page_number, page_size)
+                        st.session_state["virasyn_search_result"] = result
+                        st.session_state["virasyn_search_source"] = source
+                        st.session_state["virasyn_search_query"] = query.strip()
+                    elif source == "Crossref records":
+                        result = search_crossref(query.strip(), offset, page_size)
+                        st.session_state["virasyn_search_result"] = result
+                        st.session_state["virasyn_search_source"] = source
+                        st.session_state["virasyn_search_query"] = query.strip()
                     elif source == "NCBI nucleotide genomes":
                         result = search_ncbi_sequences("nuccore", query.strip(), offset, page_size)
                         st.session_state["virasyn_search_result"] = result
@@ -130,6 +152,21 @@ with database_tab:
                         st.session_state["virasyn_search_query"] = query.strip()
                     elif source == "NCBI protein sequences":
                         result = search_ncbi_sequences("protein", query.strip(), offset, page_size)
+                        st.session_state["virasyn_search_result"] = result
+                        st.session_state["virasyn_search_source"] = source
+                        st.session_state["virasyn_search_query"] = query.strip()
+                    elif source == "NCBI taxonomy":
+                        result = search_ncbi_taxonomy(query.strip(), offset, page_size)
+                        st.session_state["virasyn_search_result"] = result
+                        st.session_state["virasyn_search_source"] = source
+                        st.session_state["virasyn_search_query"] = query.strip()
+                    elif source == "ENA nucleotide sequences":
+                        result = search_ena(query.strip(), offset, page_size)
+                        st.session_state["virasyn_search_result"] = result
+                        st.session_state["virasyn_search_source"] = source
+                        st.session_state["virasyn_search_query"] = query.strip()
+                    elif source == "InterPro entries":
+                        result = search_interpro(query.strip(), page_number, page_size)
                         st.session_state["virasyn_search_result"] = result
                         st.session_state["virasyn_search_source"] = source
                         st.session_state["virasyn_search_query"] = query.strip()
@@ -177,12 +214,73 @@ with database_tab:
                 kind = (
                     "NCBI Nucleotide" if current_source == "NCBI nucleotide genomes" else
                     "NCBI Protein" if current_source == "NCBI protein sequences" else
+                    "NCBI Taxonomy" if current_source == "NCBI taxonomy" else
+                    "Europe PMC" if current_source == "Europe PMC articles" else
+                    "OpenAlex" if current_source == "OpenAlex scholarly works" else
+                    "Crossref" if current_source == "Crossref records" else
+                    "European Nucleotide Archive" if current_source == "ENA nucleotide sequences" else
+                    "InterPro" if current_source == "InterPro entries" else
                     current_source
                 )
                 render_record(record, kind)
 
 
-with analysis_tab:
+with resources_tab:
+    st.subheader("A wider directory of public virology and molecular-biology resources")
+    st.write(
+        "VIRASYN directly searches the providers marked as integrated. Other specialist resources are listed "
+        "as external portals and can be opened in a new tab; they are not yet queried by VIRASYN."
+    )
+    resource_groups = {
+        "Literature and scholarly discovery": [
+            ("PubMed", "https://pubmed.ncbi.nlm.nih.gov/", "Integrated · biomedical literature"),
+            ("Europe PMC", "https://europepmc.org/", "Integrated · life-sciences literature and full-text links"),
+            ("OpenAlex", "https://openalex.org/", "Integrated · scholarly works and citation metadata"),
+            ("Crossref", "https://search.crossref.org/", "Integrated · DOI and publication metadata"),
+        ],
+        "Viral genomes, sequence archives and taxonomy": [
+            ("NCBI Virus", "https://www.ncbi.nlm.nih.gov/labs/virus/", "External portal · curated virus sequence discovery"),
+            ("NCBI Nucleotide", "https://www.ncbi.nlm.nih.gov/nuccore", "Integrated · nucleotide records"),
+            ("NCBI Taxonomy", "https://www.ncbi.nlm.nih.gov/taxonomy", "Integrated · organism taxonomy"),
+            ("European Nucleotide Archive", "https://www.ebi.ac.uk/ena/browser/home", "Integrated · sequence archive"),
+            ("ICTV Virus Taxonomy", "https://ictv.global/taxonomy", "External portal · official virus taxonomy"),
+            ("Nextstrain", "https://nextstrain.org/", "External portal · pathogen genomic epidemiology"),
+        ],
+        "Proteins, domains and functional annotation": [
+            ("UniProtKB", "https://www.uniprot.org/", "Integrated · protein knowledgebase"),
+            ("InterPro", "https://www.ebi.ac.uk/interpro/", "Integrated · protein families and domains"),
+            ("Pfam", "https://www.ebi.ac.uk/interpro/entry/pfam/", "External portal · protein families"),
+            ("AlphaFold Protein Structure Database", "https://alphafold.ebi.ac.uk/", "External portal · predicted protein structures"),
+            ("NCBI Conserved Domain Database", "https://www.ncbi.nlm.nih.gov/Structure/cdd/cdd.shtml", "External portal · conserved domains"),
+        ],
+        "Macromolecular structures": [
+            ("RCSB Protein Data Bank", "https://www.rcsb.org/", "Integrated · experimental and computed structures"),
+            ("PDBe", "https://www.ebi.ac.uk/pdbe/", "External portal · Europe-based structure archive access"),
+        ],
+        "Phage and virus-specialist resources": [
+            ("PHROGs", "https://phrogs.lmge.uca.fr/", "External portal · phage protein orthologous groups"),
+            ("PhagesDB", "https://phagesdb.org/", "External portal · bacteriophage genomes and metadata"),
+            ("INPHARED", "https://github.com/RyanCook94/inphared", "External portal · curated phage genome dataset"),
+            ("ViralZone", "https://viralzone.expasy.org/", "External portal · virus biology knowledge resource"),
+            ("Virus-Host DB", "https://www.genome.jp/virushostdb/", "External portal · virus-host associations"),
+            ("BV-BRC", "https://www.bv-brc.org/", "External portal · bacterial and viral research resources"),
+            ("VEuPathDB", "https://veupathdb.org/", "External portal · eukaryotic pathogen bioinformatics"),
+        ],
+    }
+    for group_name, entries in resource_groups.items():
+        st.markdown(f"### {group_name}")
+        cols = st.columns(2)
+        for index, (name, url, status) in enumerate(entries):
+            with cols[index % 2]:
+                with st.container(border=True):
+                    st.markdown(f"**[{name}]({url})**")
+                    st.caption(status)
+    st.info(
+        "Database coverage and licensing differ. VIRASYN does not copy all external database contents into its own store. "
+        "It searches selected public APIs and links users back to source records. Additional adapters can be added modularly."
+    )
+
+with about_tab:
     st.warning(
         "Analysis tools are exploratory. A sequence hit, predicted ORF or structural match "
         "does not establish receptor binding, host range or productive infection."
@@ -357,17 +455,26 @@ with about_tab:
     st.markdown("""
 VIRASYN brings literature discovery and molecular data retrieval together with sequence and structure analysis.
 
-**Live external data sources**
-- PubMed — biomedical literature.
-- NCBI Nucleotide — nucleotide sequence records.
-- NCBI Protein — protein sequence records.
-- RCSB Protein Data Bank — macromolecular structures.
-- UniProtKB — protein knowledgebase.
+**Directly integrated search providers**
+- PubMed and Europe PMC — biomedical and life-sciences literature.
+- OpenAlex and Crossref — scholarly work and DOI metadata.
+- NCBI Nucleotide, Protein and Taxonomy.
+- European Nucleotide Archive (ENA).
+- RCSB Protein Data Bank.
+- UniProtKB and InterPro.
 
-VIRASYN retrieves records from these services when you search. It does not claim to own, replace or reproduce their underlying databases. Record pages link back to the original providers.
+VIRASYN retrieves records from upstream APIs when you search. It does not own, replace or mirror those databases. The Database Directory also links to specialist portals that are not yet directly queried by the app.
 """)
     st.subheader("Scientific interpretation")
     st.markdown("""
 VIRASYN is not yet a universal virus-host prediction system. Bacteriophage RBPs, animal-virus attachment/entry proteins and plant-virus host interactions require separate training data and methods. Sequence similarity, attachment, receptor binding, host range and productive infection are distinct levels of evidence.
+""")
+    st.subheader("VIRASYN AI helper")
+    st.markdown("""
+The floating assistant provides help with site navigation, search strategy and interpretation of computational outputs.
+Without an API key it runs in quick-help mode. To enable generative responses, the site owner must set
+`OPENAI_API_KEY` in Streamlit Community Cloud → App settings → Secrets. An optional
+`VIRASYN_AI_MODEL` secret selects a model available to that API account. API usage is billed separately
+from a ChatGPT subscription. Keep the key server-side and never put it in browser JavaScript or GitHub code.
 """)
     st.caption("Cite the primary databases, records and software methods used in every analysis.")
