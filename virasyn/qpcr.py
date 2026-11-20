@@ -103,8 +103,8 @@ def normalise_qpcr_wells(
     role_text = result["sample_role"].fillna("").str.lower()
     sample_text = result["sample_id"].fillna("").str.lower()
     result["is_ntc"] = (
-        role_text.str.contains(r"\bntc\b|no[- ]template", regex=True)
-        | sample_text.str.contains(r"\bntc\b|no[- ]template control", regex=True)
+        role_text.str.contains(r"ntc|no[- ]template", regex=True)
+        | sample_text.str.contains(r"^ntc(?:$|[_\-\s0-9])|no[- ]template control", regex=True)
     )
     result["detected"] = result["Cq"].notna()
     result["well_status"] = np.select(
@@ -229,6 +229,13 @@ def analyse_relative_expression(
         efficiencies[target] = value
 
     sample_wells = wells.loc[~wells["is_ntc"]].copy()
+    condition_counts = sample_wells.groupby("sample_id")["condition"].nunique()
+    if condition_counts.gt(1).any():
+        bad_samples = condition_counts[condition_counts.gt(1)].index.astype(str).tolist()
+        raise ValueError(
+            "Each biological sample ID must belong to one condition. Check: "
+            + ", ".join(bad_samples[:10])
+        )
     grouped = sample_wells.groupby(
         ["sample_id", "condition", "target"], dropna=False
     )["Cq"]
