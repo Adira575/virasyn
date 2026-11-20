@@ -30,6 +30,14 @@ def _get_secret(name: str) -> str:
 
 def _fallback_answer(question: str, context: str) -> str:
     q = question.lower()
+    if any(word in q for word in ["roadmap", "future", "next development", "planned feature"]):
+        return (
+            "The next planned VIRASYN development areas are individual virus profile pages, saved research "
+            "collections, automated genome annotation, and scientifically validated virus-host prediction "
+            "models. These are roadmap items, not features in the current release. Host-prediction models "
+            "will need virus-group-appropriate datasets and independent validation; a single universal model "
+            "would not be scientifically appropriate."
+        )
     if any(word in q for word in ["what can", "features", "how to use", "help"]):
         return (
             "I can help you use VIRASYN. The Research Database searches literature, nucleotide and protein "
@@ -138,13 +146,62 @@ def render_floating_assistant() -> None:
     )
 
     if st.session_state["virasyn_ai_open"]:
-        panel = st.container(border=True)
+        # A keyed container lets the card and all of its descendants receive an
+        # opaque surface, rather than only positioning a transparent wrapper.
+        st.markdown(
+            """
+            <style>
+            .st-key-virasyn_ai_panel {
+                width: min(390px, calc(100vw - 2rem)) !important;
+                max-width: calc(100vw - 2rem) !important;
+                box-sizing: border-box !important;
+                padding: .85rem .9rem !important;
+                background: #ffffff !important;
+                color: #172333 !important;
+                border: 1px solid #d7dee8 !important;
+                border-radius: 18px !important;
+                box-shadow: 0 14px 42px rgba(15, 23, 42, .28) !important;
+                isolation: isolate !important;
+                opacity: 1 !important;
+            }
+            .st-key-virasyn_ai_panel > div,
+            .st-key-virasyn_ai_panel [data-testid="stVerticalBlock"] {
+                background: #ffffff !important;
+                color: #172333 !important;
+            }
+            .st-key-virasyn_ai_panel [data-testid="stChatMessage"] {
+                background: #f3f6fa !important;
+                color: #172333 !important;
+                border-radius: 12px !important;
+                padding: .55rem .7rem !important;
+            }
+            .st-key-virasyn_ai_panel input {
+                background: #ffffff !important;
+                color: #172333 !important;
+            }
+            .st-key-virasyn_ai_panel [data-testid="stForm"] {
+                background: #ffffff !important;
+                border: 0 !important;
+                padding: .2rem 0 0 !important;
+            }
+            @media (max-width: 480px) {
+                .st-key-virasyn_ai_panel {
+                    width: calc(100vw - 1rem) !important;
+                    max-width: calc(100vw - 1rem) !important;
+                    padding: .7rem !important;
+                }
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        panel = st.container(key="virasyn_ai_panel", border=False)
         with panel:
             st.markdown("### ✦ VIRASYN AI")
             st.caption("Research guide · Database help · Bioinformatics explanations")
             if not (_get_secret("OPENAI_API_KEY") or _get_secret("VIRASYN_OPENAI_API_KEY")):
                 st.info("Quick-help mode. Full generative answers can be enabled by the site owner with a server-side OpenAI API key.")
-            chat_area = st.container(height=310)
+            chat_area = st.container(height=245)
             with chat_area:
                 for message in st.session_state["virasyn_ai_messages"][-12:]:
                     with st.chat_message(message["role"]):
@@ -170,8 +227,13 @@ def render_floating_assistant() -> None:
                 st.rerun()
             st.caption("AI answers may be incomplete. Verify scientific claims against original records and papers.")
         panel.float(
-            "position:fixed;right:1rem;bottom:4.8rem;"
-            "width:min(410px,calc(100vw - 2rem));max-height:72vh;"
-            "overflow-y:auto;z-index:999998;background:var(--background-color);"
-            "border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.24);"
+            "position:fixed!important;right:1rem!important;bottom:5.15rem!important;"
+            "width:min(390px,calc(100vw - 2rem))!important;"
+            "max-width:calc(100vw - 2rem)!important;"
+            "max-height:calc(100vh - 6.5rem)!important;overflow-y:auto!important;"
+            "overscroll-behavior:contain;z-index:999998!important;"
+            "background-color:#ffffff!important;color:#172333!important;"
+            "border:1px solid #d7dee8!important;border-radius:18px!important;"
+            "box-shadow:0 14px 42px rgba(15,23,42,.28)!important;"
+            "isolation:isolate!important;opacity:1!important;box-sizing:border-box!important;"
         )

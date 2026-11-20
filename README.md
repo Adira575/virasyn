@@ -40,6 +40,20 @@ The model setting is optional; use a model that is available to your API account
 
 The assistant is a research aid, not a clinical decision system. Verify scientific claims against original records and literature. It should not be treated as evidence that a predicted protein binds a receptor or that a virus infects a host.
 
+## Development roadmap
+
+The next major development goal is to move VIRASYN towards a comprehensive viral research
+knowledgebase through four planned capabilities:
+
+1. **Individual virus profile pages** that bring taxonomy, genome, protein, host and literature evidence together.
+2. **Saved research collections** for organizing records, searches and analysis outputs.
+3. **Automated genome annotation** with transparent methods, provenance and reviewable outputs.
+4. **Scientifically validated virus–host prediction models** developed for appropriate virus groups and evaluated against independent, well-curated evidence.
+
+These are planned development areas, not current-release features. Virus–host prediction will require
+virus-group-appropriate datasets and independent validation; a single universal model should not be
+assumed to cover bacteriophages, animal viruses and plant viruses.
+
 ## Analysis features
 
 - Multi-file nucleotide/protein FASTA upload.
