@@ -802,7 +802,7 @@ with resources_tab:
         "It searches selected public APIs and links users back to source records. Additional adapters can be added modularly."
     )
 
-with about_tab:
+with analysis_tab:
     st.warning(
         "Analysis tools are exploratory. A sequence hit, predicted ORF or structural match "
         "does not establish receptor binding, host range or productive infection."
