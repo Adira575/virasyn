@@ -13,6 +13,7 @@ import tempfile
 
 import pandas as pd
 from Bio import SeqIO
+from Bio.Seq import Seq
 
 from virasyn.core import predict_six_frame_orfs
 
@@ -86,7 +87,7 @@ def analyse_pharis_genome(
         output_path = work / "blast_hits.tsv"
         SeqIO.write(
             [SeqIO.SeqRecord(
-                seq=__import__("Bio.Seq", fromlist=["Seq"]).Seq(item["protein_sequence"]),
+                seq=Seq(item["protein_sequence"]),
                 id=item["orf_id"], description=f"{item['sequence_id']} {item['strand']} frame {item['frame']}",
             ) for item in orfs], query_path, "fasta"
         )
