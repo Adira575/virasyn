@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from io import BytesIO
+import json
 import tempfile
 
 import pandas as pd
@@ -237,13 +238,14 @@ with qpcr_tab:
         "each biological sample; they are not counted as independent biological replicates."
     )
     st.info(
-        "Supported inputs: CSV, TSV, TXT and Excel XLSX/XLSM files containing reported Cq/Ct values. "
-        "This release does not yet derive Cq from raw cycle-by-cycle fluorescence traces or parse "
-        "proprietary binary instrument projects. Export a Cq/Ct table from your instrument software first."
+        "Supported inputs: RDML, CSV, TSV, TXT and Excel XLSX/XLSM files containing reported Cq/Ct values. "
+        "RDML files may also include amplification and melt-curve traces, which VIRASYN can display. "
+        "Cq is not yet recalculated from raw fluorescence traces, and proprietary binary instrument projects "
+        "still need export to a supported format."
     )
     qpcr_file = st.file_uploader(
         "Upload qPCR plate/result export",
-        type=["csv", "tsv", "txt", "xlsx", "xlsm"],
+        type=["rdml", "csv", "tsv", "txt", "xlsx", "xlsm"],
         key="qpcr_input_file",
     )
 
@@ -261,6 +263,52 @@ with qpcr_tab:
             st.caption(f"Loaded {len(qpcr_raw):,} rows and {len(qpcr_raw.columns)} columns.")
             with st.expander("Preview original instrument export", expanded=True):
                 st.dataframe(qpcr_raw.head(15), use_container_width=True, hide_index=True)
+
+            if "Amplification trace (JSON)" in qpcr_raw.columns or "Melt curve trace (JSON)" in qpcr_raw.columns:
+                trace_rows = []
+                for trace_index, trace_row in qpcr_raw.iterrows():
+                    amp_text = trace_row.get("Amplification trace (JSON)", "")
+                    melt_text = trace_row.get("Melt curve trace (JSON)", "")
+                    if (isinstance(amp_text, str) and amp_text) or (isinstance(melt_text, str) and melt_text):
+                        trace_label = (
+                            f"{trace_row.get('Sample', trace_row.get('Sample ID', 'Sample'))} · "
+                            f"{trace_row.get('Target', 'Target')} · {trace_row.get('Well', trace_index)}"
+                        )
+                        trace_rows.append((trace_label, trace_index))
+                if trace_rows:
+                    with st.expander("RDML amplification and melt-curve trace viewer", expanded=False):
+                        trace_labels = [item[0] for item in trace_rows]
+                        selected_trace_label = st.selectbox(
+                            "Reaction / target",
+                            trace_labels,
+                            key="qpcr_rdml_trace_select",
+                        )
+                        selected_trace_index = dict(trace_rows)[selected_trace_label]
+                        selected_trace = qpcr_raw.loc[selected_trace_index]
+                        t1, t2 = st.columns(2)
+                        amp_text = selected_trace.get("Amplification trace (JSON)", "")
+                        melt_text = selected_trace.get("Melt curve trace (JSON)", "")
+                        with t1:
+                            st.caption("Amplification: cycle vs fluorescence")
+                            if isinstance(amp_text, str) and amp_text:
+                                amp_frame = pd.DataFrame(json.loads(amp_text))
+                                if not amp_frame.empty and {"cyc", "fluor"}.issubset(amp_frame.columns):
+                                    st.line_chart(amp_frame.set_index("cyc")["fluor"], use_container_width=True)
+                                else:
+                                    st.info("No amplification-curve points were included in this RDML reaction.")
+                            else:
+                                st.info("No amplification-curve points were included in this RDML reaction.")
+                        with t2:
+                            st.caption("Melt curve: temperature vs fluorescence")
+                            if isinstance(melt_text, str) and melt_text:
+                                melt_frame = pd.DataFrame(json.loads(melt_text))
+                                if not melt_frame.empty and {"tmp", "fluor"}.issubset(melt_frame.columns):
+                                    st.line_chart(melt_frame.set_index("tmp")["fluor"], use_container_width=True)
+                                else:
+                                    st.info("No melt-curve points were included in this RDML reaction.")
+                            else:
+                                st.info("No melt-curve points were included in this RDML reaction.")
+                        st.caption("Stored trace visualization only; VIRASYN does not yet call or recalculate Cq from these raw curves.")
 
             qpcr_columns = list(qpcr_raw.columns)
 
@@ -391,7 +439,7 @@ with qpcr_tab:
                 )
                 qpcr_standard_file = st.file_uploader(
                     "Standard-curve export (optional)",
-                    type=["csv", "tsv", "txt", "xlsx", "xlsm"],
+                    type=["rdml", "csv", "tsv", "txt", "xlsx", "xlsm"],
                     key="qpcr_standard_file",
                 )
                 qpcr_standard_results = pd.DataFrame()
