@@ -1,8 +1,13 @@
+from pathlib import Path
+
 from streamlit.testing.v1 import AppTest
 
 
+APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
+
+
 def test_sequence_analysis_workspace_renders_by_default():
-    app = AppTest.from_file("app.py", default_timeout=60).run()
+    app = AppTest.from_file(APP_PATH, default_timeout=60).run()
 
     assert not app.exception, "\\n".join(
         str(exception.message) for exception in app.exception
@@ -24,12 +29,7 @@ def test_sequence_analysis_workspace_renders_by_default():
 
 
 def test_workspace_selector_switches_sections():
-    app = AppTest.from_file("app.py", default_timeout=60).run()
-    selector = next(
-        element
-        for element in app.selectbox
-        if getattr(element, "key", None) == "virasyn_workspace_section"
-    )
+    app = AppTest.from_file(APP_PATH, default_timeout=60).run()
 
     app.selectbox(key="virasyn_workspace_section").set_value(
         "🧰 Bioinformatics workbench"
