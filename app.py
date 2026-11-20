@@ -63,6 +63,7 @@ app_section = st.selectbox(
     index=1,
     key="virasyn_workspace_section",
 )
+st.caption(f"Build: virasyn-workspace-ui-2026-11-20-r1 · Active workspace: {app_section}")
 
 def render_record(record: dict, kind: str):
     with st.container(border=True):
@@ -812,6 +813,8 @@ if app_section == "📚 Database directory":
     )
 
 if app_section == "🧬 Sequence & structure analysis":
+    st.subheader("Sequence & structure analysis")
+    st.caption("Upload FASTA sequences or PDB/mmCIF structures to begin. Optional reference files enable BLASTP and HMMER searches.")
     st.warning(
         "Analysis tools are exploratory. A sequence hit, predicted ORF or structural match "
         "does not establish receptor binding, host range or productive infection."
