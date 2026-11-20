@@ -796,7 +796,7 @@ with alphafold_tab:
     model = st.session_state.get("virasyn_alphafold_model")
     if model:
         st.markdown(f"**UniProt accession:** [{model.get('uniprotAccession', alphafold_accession if 'alphafold_accession' in locals() else '')}](https://www.uniprot.org/uniprotkb/{model.get('uniprotAccession', '')}/entry)")
-        st.markdown(f"**AlphaFold model:** [{model.get('entryId', 'Open model')}]({f\"https://alphafold.ebi.ac.uk/entry/{model.get('uniprotAccession', '')}\"})")
+        st.markdown(f"**AlphaFold model:** [{model.get('entryId', 'Open model')}](https://alphafold.ebi.ac.uk/entry/{model.get('uniprotAccession', '')})")
         m1, m2, m3 = st.columns(3)
         m1.metric("Mean pLDDT", f"{float(model.get('globalMetricValue', model.get('confidenceScore'))):.1f}" if model.get('globalMetricValue', model.get('confidenceScore')) is not None else "Not supplied")
         m2.metric("Model version", str(model.get("latestVersion", "Not supplied")))
