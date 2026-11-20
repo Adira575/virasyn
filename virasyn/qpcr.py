@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+import json
+import xml.etree.ElementTree as ET
+import zipfile
 from typing import Any
 
 import numpy as np
@@ -15,6 +18,152 @@ NON_DETECT_TOKENS = {
 }
 
 
+def _rdml_local_name(tag: str) -> str:
+    return str(tag).rsplit("}", 1)[-1]
+
+
+def _rdml_children(element: ET.Element, name: str) -> list[ET.Element]:
+    return [child for child in list(element) if _rdml_local_name(child.tag) == name]
+
+
+def _rdml_text(element: ET.Element, name: str) -> str:
+    nodes = _rdml_children(element, name)
+    if not nodes:
+        return ""
+    return "".join(nodes[0].itertext()).strip()
+
+
+def _rdml_trace(data_element: ET.Element, trace_name: str) -> str:
+    trace_nodes = _rdml_children(data_element, trace_name)
+    if not trace_nodes:
+        return ""
+    root = trace_nodes[0]
+    points: list[dict[str, float]] = []
+    x_name, y_name = ("cyc", "fluor") if trace_name == "adp" else ("tmp", "fluor")
+    for node in root.iter():
+        if _rdml_local_name(node.tag) != "point":
+            continue
+        x_value = node.attrib.get(x_name) or _rdml_text(node, x_name)
+        y_value = node.attrib.get(y_name) or _rdml_text(node, y_name)
+        try:
+            points.append({x_name: float(x_value), "fluor": float(y_value)})
+        except (TypeError, ValueError):
+            continue
+    return json.dumps(points, separators=(",", ":")) if points else ""
+
+
+def _read_rdml(data: bytes) -> pd.DataFrame:
+    """Read common RDML 1.x XML exports, including XML packaged inside a ZIP."""
+    xml_payload: bytes | None = None
+    if zipfile.is_zipfile(BytesIO(data)):
+        with zipfile.ZipFile(BytesIO(data)) as archive:
+            candidates = [
+                name for name in archive.namelist()
+                if name.lower().endswith(".xml") and not name.startswith("__MACOSX/")
+            ]
+            for name in candidates:
+                candidate = archive.read(name)
+                if b"<rdml" in candidate[:4096].lower():
+                    xml_payload = candidate
+                    break
+            if xml_payload is None:
+                raise ValueError("The RDML archive did not contain an XML file with an <rdml> root.")
+    else:
+        xml_payload = data
+
+    try:
+        root = ET.fromstring(xml_payload)
+    except ET.ParseError as exc:
+        raise ValueError(f"Could not parse RDML XML: {exc}") from exc
+    if _rdml_local_name(root.tag) != "rdml":
+        raise ValueError("The uploaded XML does not have an RDML root element.")
+
+    sample_info: dict[str, dict[str, str]] = {}
+    target_names: dict[str, str] = {}
+    for node in root.iter():
+        local = _rdml_local_name(node.tag)
+        node_id = node.attrib.get("id", "")
+        if local == "sample" and node_id and _rdml_children(node, "name"):
+            raw_role = ""
+            for role_node in _rdml_children(node, "type"):
+                raw_role = (
+                    role_node.attrib.get("type")
+                    or "".join(role_node.itertext()).strip()
+                    or raw_role
+                )
+            role_aliases = {
+                "ntc": "NTC",
+                "std": "Standard",
+                "pos": "Positive control",
+                "unkn": "Unknown sample",
+                "opt": "Optical calibrator",
+            }
+            quantities: dict[str, str] = {}
+            for quantity_node in _rdml_children(node, "quantity"):
+                target_id = quantity_node.attrib.get("targetId", "")
+                value = _rdml_text(quantity_node, "value")
+                if not value:
+                    value = "".join(quantity_node.itertext()).strip()
+                if value:
+                    quantities[target_id] = value
+            sample_info[node_id] = {
+                "name": _rdml_text(node, "name") or node_id,
+                "description": _rdml_text(node, "description"),
+                "role": role_aliases.get(raw_role.lower(), raw_role),
+                "quantities": json.dumps(quantities),
+            }
+        elif local == "target" and node_id and _rdml_children(node, "name"):
+            target_names[node_id] = _rdml_text(node, "name") or node_id
+
+    rows: list[dict[str, Any]] = []
+    for experiment in [node for node in root.iter() if _rdml_local_name(node.tag) == "experiment"]:
+        experiment_id = experiment.attrib.get("id", "")
+        for run in _rdml_children(experiment, "run"):
+            run_id = run.attrib.get("id", "")
+            for reaction in _rdml_children(run, "react"):
+                reaction_id = reaction.attrib.get("id", "")
+                sample_refs = _rdml_children(reaction, "sample")
+                sample_id = sample_refs[0].attrib.get("id", "") if sample_refs else ""
+                sample = sample_info.get(sample_id, {
+                    "name": sample_id or "Unnamed sample",
+                    "description": "",
+                    "role": "",
+                    "quantities": "{}",
+                })
+                try:
+                    sample_quantities = json.loads(sample.get("quantities", "{}"))
+                except (TypeError, json.JSONDecodeError):
+                    sample_quantities = {}
+
+                for data_element in _rdml_children(reaction, "data"):
+                    target_refs = _rdml_children(data_element, "tar")
+                    target_id = target_refs[0].attrib.get("id", "") if target_refs else ""
+                    target = target_names.get(target_id, target_id or "Unknown target")
+                    cq_value = _rdml_text(data_element, "cq")
+                    if cq_value in {"-1", "-1.0"}:
+                        cq_value = "Undetermined"
+                    known_quantity = sample_quantities.get(target_id, sample_quantities.get("", ""))
+                    rows.append({
+                        "Sample": sample.get("name", sample_id or "Unnamed sample"),
+                        "Sample ID": sample_id,
+                        "Sample description": sample.get("description", ""),
+                        "Sample role": sample.get("role", ""),
+                        "Target": target,
+                        "Target ID": target_id,
+                        "Cq": cq_value,
+                        "Known concentration": known_quantity,
+                        "Well": reaction_id,
+                        "Run": run_id,
+                        "Experiment": experiment_id,
+                        "Amplification trace (JSON)": _rdml_trace(data_element, "adp"),
+                        "Melt curve trace (JSON)": _rdml_trace(data_element, "mdp"),
+                    })
+
+    if not rows:
+        raise ValueError("No reaction/target Cq records were found in this RDML file.")
+    return pd.DataFrame(rows)
+
+
 def read_qpcr_table(
     data: bytes,
     filename: str,
@@ -22,14 +171,16 @@ def read_qpcr_table(
 ) -> pd.DataFrame:
     """Read a tabular instrument export. Raw fluorescence traces are not Cq tables."""
     suffix = Path(filename).suffix.lower()
-    if suffix in {".xlsx", ".xlsm"}:
+    if suffix == ".rdml":
+        frame = _read_rdml(data)
+    elif suffix in {".xlsx", ".xlsm"}:
         frame = pd.read_excel(BytesIO(data), sheet_name=sheet_name or 0, engine="openpyxl")
     elif suffix == ".tsv":
         frame = pd.read_csv(BytesIO(data), sep="\t")
     elif suffix in {".csv", ".txt"}:
         frame = pd.read_csv(BytesIO(data), sep=None, engine="python")
     else:
-        raise ValueError("Supported qPCR exports are CSV, TSV, TXT, XLSX and XLSM.")
+        raise ValueError("Supported qPCR exports are RDML, CSV, TSV, TXT, XLSX and XLSM.")
     if not isinstance(frame, pd.DataFrame) or frame.empty:
         raise ValueError("The selected file or worksheet contains no tabular data.")
     frame.columns = [str(column).strip() for column in frame.columns]
