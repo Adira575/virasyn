@@ -50,17 +50,18 @@ div[data-testid="stMetric"] {background:rgba(120,150,170,.08); border:1px solid 
 
 st.caption("An integrated viral research discovery and analysis workspace.")
 
-database_tab, analysis_tab, qpcr_tab, workbench_tab, resources_tab, about_tab = st.tabs(
+database_tab, analysis_tab, qpcr_tab, workbench_tab, alphafold_tab, resources_tab, about_tab = st.tabs(
     [
         "🔎 Research database",
         "🧬 Sequence & structure analysis",
         "🧪 PCR / qPCR analysis",
         "🧰 Bioinformatics workbench",
+        "🧬 AlphaFold",
         "📚 Database directory",
         "ℹ️ About VIRASYN",
     ]
 )
-st.caption("Build: virasyn-workspace-ui-2026-11-20-r2")
+st.caption("Build: virasyn-workspace-ui-2026-11-20-r3")
 
 def render_record(record: dict, kind: str):
     with st.container(border=True):
@@ -752,6 +753,77 @@ with workbench_tab:
         "New workflows will be added with reproducible parameters, inspectable intermediate results, "
         "clear software provenance and downloadable outputs."
     )
+
+
+
+with alphafold_tab:
+    st.subheader("AlphaFold protein structure lookup")
+    st.write(
+        "Retrieve published AlphaFold Database predictions by UniProt accession, inspect "
+        "model confidence metadata, visualize the predicted structure and download the coordinates."
+    )
+    st.info(
+        "This module retrieves existing AlphaFold Database models. It does not run a new "
+        "AlphaFold prediction. For a new sequence prediction, use the official AlphaFold Server."
+    )
+    from virasyn.alphafold import lookup_alphafold_prediction, download_alphafold_structure
+
+    with st.form("alphafold_lookup_form"):
+        alphafold_accession = st.text_input(
+            "UniProt accession",
+            placeholder="e.g. P0DTC2",
+            help="Enter a UniProt accession for a protein with a model in the AlphaFold Protein Structure Database.",
+        )
+        alphafold_format = st.selectbox("Coordinate format", ["PDB", "mmCIF"])
+        alphafold_submit = st.form_submit_button("Find AlphaFold structure", type="primary")
+
+    if alphafold_submit:
+        if not alphafold_accession.strip():
+            st.warning("Enter a UniProt accession.")
+        else:
+            try:
+                with st.spinner("Querying the AlphaFold Protein Structure Database..."):
+                    predictions = lookup_alphafold_prediction(alphafold_accession.strip())
+                if not predictions:
+                    st.warning("No AlphaFold Database model was found for this accession. Check the accession or try the UniProt entry.")
+                    st.session_state.pop("virasyn_alphafold_model", None)
+                else:
+                    st.session_state["virasyn_alphafold_model"] = predictions[0]
+                    st.success(f"Found {len(predictions)} AlphaFold model record(s). Showing the first model.")
+            except (ValueError, RuntimeError) as exc:
+                st.error(f"AlphaFold lookup failed: {exc}")
+
+    model = st.session_state.get("virasyn_alphafold_model")
+    if model:
+        st.markdown(f"**UniProt accession:** [{model.get('uniprotAccession', alphafold_accession if 'alphafold_accession' in locals() else '')}](https://www.uniprot.org/uniprotkb/{model.get('uniprotAccession', '')}/entry)")
+        st.markdown(f"**AlphaFold model:** [{model.get('entryId', 'Open model')}]({model.get('modelUrl', 'https://alphafold.ebi.ac.uk/')})")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Mean pLDDT", f"{model['confidenceScore']:.1f}" if model.get("confidenceScore") is not None else "Not supplied")
+        m2.metric("Model version", str(model.get("latestVersion", "Not supplied")))
+        m3.metric("UniProt", model.get("uniprotAccession", "—"))
+        st.caption("pLDDT is a local confidence estimate (0–100), not experimental validation or a measure of biological activity.")
+        try:
+            with st.spinner(f"Downloading {alphafold_format} coordinates..."):
+                structure_text, filename = download_alphafold_structure(model, alphafold_format)
+            st.download_button(
+                f"Download {alphafold_format} structure",
+                structure_text,
+                filename,
+                "chemical/x-pdb" if alphafold_format == "PDB" else "chemical/x-mmcif",
+            )
+            if alphafold_format == "PDB":
+                try:
+                    import streamlit.components.v1 as components
+                    components.html(render_structure_html(structure_text), height=560, scrolling=False)
+                except Exception as viewer_error:
+                    st.warning(f"Structure viewer could not render this model: {viewer_error}")
+            else:
+                st.caption("The mmCIF coordinates are available to download. Switch to PDB format to use the built-in 3D viewer.")
+        except (ValueError, RuntimeError) as exc:
+            st.error(f"Could not retrieve model coordinates: {exc}")
+
+    st.markdown("[Open AlphaFold Protein Structure Database](https://alphafold.ebi.ac.uk/) · [Open AlphaFold Server for new sequence predictions](https://alphafoldserver.com/)")
+
 
 
 with resources_tab:
