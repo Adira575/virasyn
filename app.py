@@ -62,7 +62,7 @@ database_tab, analysis_tab, qpcr_tab, workbench_tab, alphafold_tab, pharis_tab, 
         "ℹ️ About VIRASYN",
     ]
 )
-st.caption("Build: virasyn-workspace-ui-2026-11-20-r4")
+st.caption("Build: virasyn-workspace-ui-2026-11-20-r5")
 
 def render_record(record: dict, kind: str):
     with st.container(border=True):
@@ -724,6 +724,11 @@ with workbench_tab:
             "Capabilities": "RDML and tabular Cq/Ct import, technical-replicate QC, standard curves, efficiency-aware relative expression, NTC flags and Excel/CSV reports.",
             "Current status": "Available",
         },
+        {
+            "Module": "PhARIS-inspired RBP intelligence",
+            "Capabilities": "Six-frame ORF screening, local BLASTP against an authorized RBP reference FASTA, identity/query-coverage thresholds, optional cluster metadata and downloadable candidate reports.",
+            "Current status": "Available · reference library supplied by user",
+        },
     ])
     st.dataframe(
         module_catalogue,
@@ -970,6 +975,7 @@ with resources_tab:
             ("PHROGs", "https://phrogs.lmge.uca.fr/", "External portal · phage protein orthologous groups"),
             ("PhagesDB", "https://phagesdb.org/", "External portal · bacteriophage genomes and metadata"),
             ("INPHARED", "https://github.com/RyanCook94/inphared", "External portal · curated phage genome dataset"),
+            ("PhARIS", "https://github.com/JKrusche1/PhARIS", "External research tool · S. aureus phage RBP identification; VIRASYN provides an independent compatible workflow"),
             ("ViralZone", "https://viralzone.expasy.org/", "External portal · virus biology knowledge resource"),
             ("Virus-Host DB", "https://www.genome.jp/virushostdb/", "External portal · virus-host associations"),
             ("BV-BRC", "https://www.bv-brc.org/", "External portal · bacterial and viral research resources"),
@@ -1174,6 +1180,7 @@ VIRASYN brings literature discovery and molecular data retrieval together with s
 - RCSB Protein Data Bank.
 - UniProtKB and InterPro.
 - AlphaFold Protein Structure Database — published protein structure predictions, confidence metadata and coordinate downloads.
+- PhARIS-inspired RBP intelligence — independent local six-frame ORF and BLASTP workflow using an authorized user-supplied reference library.
 
 VIRASYN retrieves records from upstream APIs when you search. It does not own, replace or mirror those databases. The Database Directory also links to specialist portals that are not yet directly queried by the app.
 """)
@@ -1183,6 +1190,8 @@ VIRASYN is not yet a universal virus-host prediction system. Bacteriophage RBPs,
 """)
     st.subheader("Development roadmap")
     st.markdown("""
+The PhARIS-inspired module is an independent implementation and does not bundle the original PhARIS reference sequences. Use only reference datasets you are authorized to use. Homology matches do not establish adsorption, receptor binding, infection or therapeutic suitability.
+
 The next major development goal is to move VIRASYN towards a comprehensive viral research
 knowledgebase through these planned capabilities:
 
