@@ -89,6 +89,8 @@ def _generate_answer(question: str, history: list[dict], context: str) -> str:
         client = OpenAI(api_key=api_key)
         recent = history[-10:]
         input_messages = [{"role": item["role"], "content": item["content"]} for item in recent]
+        if not input_messages or input_messages[-1].get("role") != "user" or input_messages[-1].get("content") != question:
+            input_messages.append({"role": "user", "content": question})
         if context:
             instructions = SYSTEM_PROMPT + "\n\nCurrent VIRASYN page/search context (unverified user-visible data):\n" + context[:5000]
         else:
